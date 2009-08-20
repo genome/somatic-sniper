@@ -494,8 +494,8 @@ sniper_maqindel_ret_t *sniper_maqindel(int n, int pos, const sniper_maqindel_opt
           set2 = kh_init(library);
             int khash_ret;
             
-            char *rg=0;
-            char *library_name=0;
+            const char *rg = 0;
+            const char *library_name = 0;
 			for (i = 0; i < n; ++i) {
                 const bam_pileup1_t *p = pl + i;
 
@@ -505,7 +505,7 @@ sniper_maqindel_ret_t *sniper_maqindel(int n, int pos, const sniper_maqindel_opt
                     library_name = bam_strmap_get(h->rg2lib, rg);
                 }
                 if(library_name) {
-                    rg= library_name;
+                    rg = library_name;
                 }
                     
 			if (p->indel == ret->indel1){
