@@ -244,11 +244,12 @@ int main(int argc, char *argv[])
     }
     if (optind == argc) {
         fprintf(stderr, "\n");
-        fprintf(stderr, "somaticsniper [options] <tumor.bam> <normal.bam> <snp_output_file> <indel_output_file>\n\n");
+        fprintf(stderr, "somaticsniper [options] -f <ref.fasta> <tumor.bam> <normal.bam> <snp_output_file> <indel_output_file>\n\n");
+        fprintf(stderr, "Required Option: \n");
+        fprintf(stderr, "        -f FILE   REQUIRED reference sequence in the FASTA format\n\n");
         fprintf(stderr, "Options: \n");
         fprintf(stderr, "        -q INT    filtering reads with mapping quality less than INT [%d]\n", d->mapQ);
         fprintf(stderr, "        -Q INT    filtering somatic snp output(NOT INDELS!) with somatic quality less than  INT [15]\n");
-        fprintf(stderr, "        -f FILE   reference sequence in the FASTA format\n\n");
         fprintf(stderr, "        -T FLOAT  theta in maq consensus calling model (for -c/-g) [%f]\n", d->c->theta);
         fprintf(stderr, "        -N INT    number of haplotypes in the sample (for -c/-g) [%d]\n", d->c->n_hap);
 
@@ -256,10 +257,19 @@ int main(int argc, char *argv[])
         fprintf(stderr, "        -G FLOAT  prior of an indel between two haplotypes (for -c/-g) [%f]\n", d->ido->r_indel);
         fprintf(stderr, "        -I INT    phred prob. of an indel in sequencing/prep. (for -c/-g) [%d]\n", d->ido->q_indel);
         fprintf(stderr, "\n");
-        free(fn_fa); free(d);
+        free(fn_fa); sniper_maqcns_destroy(d->c); free(d->ido); free(d);
         return 1;
     }
-    if (fn_fa) d->fai = fai_load(fn_fa);
+    if (fn_fa) {
+        d->fai = fai_load(fn_fa);
+    }
+    else {
+        fprintf(stderr, "You MUST specify a reference sequence. It isn't optional.\n");
+        sniper_maqcns_destroy(d->c);
+        free(d->ido); 
+        free(d);
+        exit(1);
+    }
     free(fn_fa);
     sniper_maqcns_prepare(d->c);
     fprintf(stderr,"Preparing to snipe some somatics\n");
@@ -270,8 +280,6 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Tumor bam is %s\n", argv[optind]);
     d->h1 = bam_header_read(fp1);
     sam_header_parse_rg(d->h1);
-
-
     fp2 = bam_open(argv[optind+1], "r");
     d->h2 = bam_header_read(fp2);
     sam_header_parse_rg(d->h2);
@@ -295,6 +303,8 @@ int main(int argc, char *argv[])
     if (d->fai) fai_destroy(d->fai);
     sniper_maqcns_destroy(d->c);
     free(d->ido); free(d->ref); free(d);
+    fclose(snp_fh);
+    fclose(indel_fh);
     return 0;
 }
 
