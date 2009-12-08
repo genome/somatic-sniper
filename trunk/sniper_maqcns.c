@@ -580,6 +580,9 @@ sniper_maqindel_ret_t *sniper_somaticindelscore(int n, int pos, const sniper_maq
     }else{
         max_ins=tumor_indel->indel2;
     }
+    if(max_ins < 0) {
+        max_ins = 0;
+    }
     { // calculate left and right boundary
         bam_segreg_t seg;
         left = 0x7fffffff; right = 0;
