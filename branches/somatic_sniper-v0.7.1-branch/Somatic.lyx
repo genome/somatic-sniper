@@ -1,0 +1,251 @@
+#LyX 1.5.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 276
+\begin_document
+\begin_header
+\textclass article
+\language english
+\inputencoding auto
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\paperfontsize default
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\cite_engine basic
+\use_bibtopic false
+\paperorientation portrait
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\defskip medskip
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\author "" 
+\author "" 
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Somatic Score and Genotype Determination
+\end_layout
+
+\begin_layout Author
+David Larson and Ken Chen
+\end_layout
+
+\begin_layout Date
+December 31, 2009
+\end_layout
+
+\begin_layout Section
+Theoretical basis
+\end_layout
+
+\begin_layout Standard
+If we treat the tumor genotype, 
+\begin_inset Formula $G_{t}$
+\end_inset
+
+, and the normal genotype, 
+\begin_inset Formula $G_{n}$
+\end_inset
+
+, as a single variable 
+\begin_inset Formula $S$
+\end_inset
+
+ where 
+\begin_inset Formula $S=G_{t},G_{n}$
+\end_inset
+
+ then we are interested in calculating 
+\begin_inset Formula $P(S|D_{t},D_{n})$
+\end_inset
+
+ where 
+\begin_inset Formula $D_{t}$
+\end_inset
+
+ is the data from the tumor and 
+\begin_inset Formula $D_{n}$
+\end_inset
+
+ is the data from the normal.Using Bayes Theorem then 
+\begin_inset Formula \[
+\frac{P(D_{t},D_{n}|S)P(S)}{P(D_{t},D_{n})}\]
+
+\end_inset
+
+When 
+\begin_inset Formula $S$
+\end_inset
+
+ is not somatic ie 
+\begin_inset Formula $G_{t}=G_{n}$
+\end_inset
+
+then 
+\begin_inset Formula $P(D_{t},D_{n}|S)$
+\end_inset
+
+ is equivalent to the likelihood for that genotype as calculated using all
+ the data together.
+ When 
+\begin_inset Formula $S$
+\end_inset
+
+ 
+\emph on
+is
+\emph default
+ somatic ie 
+\begin_inset Formula $G_{t}\neq G_{n}$
+\end_inset
+
+ then 
+\begin_inset Formula $P(D_{t},D_{n}|S=Somatic)=P(D_{t},D_{n}|G_{t}\neq G_{n},G_{t},G_{n})=P(D_{t}|G_{t})P(D_{n}|G_{n})$
+\end_inset
+
+ here we assume independence and each 
+\begin_inset Formula $P(D|G)$
+\end_inset
+
+ is the the maq likelihood of that genomes data.
+ Lastly we must calculate 
+\begin_inset Formula $P(D_{t,}D_{n})$
+\end_inset
+
+ which can be marginalized as follows 
+\begin_inset Formula \[
+P(D_{t},D_{n})=\sum_{G_{t},G_{n}}\left[P(D_{t},D_{t}|G_{t},G_{n})P(G_{t},G_{n})\right]\]
+
+\end_inset
+
+Where each 
+\begin_inset Formula $P(D_{t},D_{t}|G_{t},G_{n})$
+\end_inset
+
+is calculated as described above and 
+\begin_inset Formula $P(G_{t},G_{n})$
+\end_inset
+
+ is calculated as 
+\begin_inset Formula \[
+P(G_{t},G_{n})=P(G_{t},G_{n}|G_{t}=G_{n})P(G_{t}=G_{n})+P(G_{t},G_{n}|G_{t}\neq G_{n})P(G_{t}\neq G_{n})\]
+
+\end_inset
+
+For instances where 
+\begin_inset Formula $S\neq Somatic$
+\end_inset
+
+, the calculation can be simplified to 
+\begin_inset Formula $P(G)P(G_{t}=G_{n})$
+\end_inset
+
+ where 
+\begin_inset Formula $P(G)$
+\end_inset
+
+ is the probability of the genotype occuring in the population (the 
+\begin_inset Quotes eld
+\end_inset
+
+Durbin Prior
+\begin_inset Quotes erd
+\end_inset
+
+) we used before and 
+\begin_inset Formula $P(G_{t}=G_{n})$
+\end_inset
+
+is the probability they are not somatic ie 
+\begin_inset Formula $1-10^{-6}$
+\end_inset
+
+if the prior probability it is somatic is 
+\begin_inset Formula $P(G_{t}\neq G_{n})=10^{-6}$
+\end_inset
+
+.
+ Note that the prior probability of a somatic mutation could vary by treatment
+ and cancer type.
+ In instances where 
+\begin_inset Formula $S=Somatic$
+\end_inset
+
+, the calculation can be marginalized to 
+\begin_inset Formula \[
+P(G_{t},G_{n}|G_{t}\neq G_{n})=\sum_{G_{n}}\left[P(G_{t}|G_{n},G_{t}\neq G_{n})P(G_{n}|G_{t}\neq G_{n})\right]\]
+
+\end_inset
+
+where 
+\begin_inset Formula $P(G_{t}|G_{n},G_{t}\neq G_{n})$
+\end_inset
+
+is derived from the mutation spectrum for a given normal genotype and 
+\begin_inset Formula $P(G_{n}|G_{t}\neq G_{n})$
+\end_inset
+
+ is the probability that a certain genotype gives rise to somatic mutations.
+ 
+\end_layout
+
+\begin_layout Section
+Algorithmic notes
+\end_layout
+
+\begin_layout Standard
+Priors will need to be pre-calculated and take in user input
+\end_layout
+
+\begin_layout Standard
+I'm not sure if we will need to 
+\begin_inset Quotes eld
+\end_inset
+
+denormalize
+\begin_inset Quotes erd
+\end_inset
+
+ the likelihoods, probably and Ken agrees
+\end_layout
+
+\begin_layout Standard
+We will need to calculate likelihoods from Tumor Data, Normal Data and All
+ Data.
+\end_layout
+
+\begin_layout Standard
+If this is to operate similarly as before, then we will only add up calculations
+ where tumor and normal are the same genotype to get a somatic score
+\backslash
+
+\end_layout
+
+\begin_layout Standard
+Could we calculate for every possible genotype and choose the most likely
+ one? I think probably and Ken agrees
+\end_layout
+
+\begin_layout Standard
+For the somatic genotypes does each likelihood need it's own prior? NO I
+ don't think so.
+\end_layout
+
+\end_body
+\end_document
