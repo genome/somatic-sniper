@@ -20,12 +20,19 @@ int get_next_pos(bam_plbuf_t *buf,bamFile fp);
 #define HOMO_INDEL1 0
 #define HOMO_INDEL2 1
 #define HET_INDEL   2
+#define BAM_REF_BASE       0  //The 4bit encoding of a base matching the reference ie 0
+#define BAM_N_BASE         15 //The 4bit encoding of the N base               
 
 static int qAddTable[1024];
 double THETA = 0.001 ;      /* population scaled mutation rate */
 int minimum_somatic_qual = 4; //minimum somatic phred score in order to report the site
 static int prior[16][10] ;  /* index over reference base, genotype */
 
+/* glf genotype order is: AA/AC/AG/AT/CC/CG/CT/GG/GT/TT, or AMRWCSYGKT in IUPAC */
+static int glfBase[10] = { 1, 3, 5, 9, 2, 6, 10, 4, 12, 8 } ; /* mapping from 10 genotypes to 4 bit base coding */
+
+#define isHom(x) (x != BAM_REF_BASE && !(x & (x - 1))) //Test to see if the 4bit encoded nucleotide is Homozygous (a power of two). Got this off the web.
+#define isHet(y) (y != BAM_REF_BASE && y != BAM_N_BASE && (y & (y - 1)))    //Test to see if a 4bit encoded nucleotide is Heterozygous.
 #define qAdd(x,y)  (x - qAddTable[512+y-x])
 
 typedef struct {
@@ -75,6 +82,25 @@ void calculatePosteriors(glf1_t *g, int lkResult[]) {
     }
 
 }
+
+void makeSoloPrior (void)
+{
+    int i, b, ref ;
+
+    for (ref = 0 ; ref < 16 ; ++ref)
+        for (i = 0 ; i < 10 ; ++i)
+        { b = glfBase[i] ;
+            if (!(b & ~ref))	/* ie b is compatible with ref */
+                prior[ref][i] = 0 ;
+            else if (b & ref)	/* ie one allele of b is compatible with ref */
+                prior[ref][i] = logPhred(THETA) ;
+            else if (isHom(b))	/* single mutation homozygote */
+                prior[ref][i] = logPhred(0.5*THETA) ;
+            else			/* two mutations */
+                prior[ref][i] = logPhred(THETA*THETA) ;
+        }
+}
+
 static void qAddTableInit (void)
 {
     int i ;
@@ -275,6 +301,7 @@ int main(int argc, char *argv[])
     fprintf(stderr,"Preparing to snipe some somatics\n");
     bamFile fp1, fp2;
     qAddTableInit();
+    makeSoloPrior();
     fp1 = (strcmp(argv[optind], "-") == 0)? bam_dopen(fileno(stdin), "r") : bam_open(argv[optind], "r");
     fprintf(stderr, "Normal bam is %s\n", argv[optind+1]);
     fprintf(stderr, "Tumor bam is %s\n", argv[optind]);

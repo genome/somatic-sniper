@@ -209,12 +209,61 @@ is derived from the mutation spectrum for a given normal genotype and
 Algorithmic notes
 \end_layout
 
-\begin_layout Standard
-Priors will need to be pre-calculated and take in user input
+\begin_layout Subsection
+Determination of Priors
 \end_layout
 
 \begin_layout Standard
-I'm not sure if we will need to 
+We have 10 x 10 different genotype possibilities, and 10 of those reflect
+ a genotype indicative of a germline status.
+ For those, we also to know the reference base and there are 16 possibilities
+ there.
+ Therefore we will need two tables a 10 x 10 table of likelihoods with the
+ diagonals ignored and a 16x10 table for the germline calls.
+ For germline genotype calls, the priors should reflect what we used previously,
+ the Durbin style priors.
+ For reference these are, for probability of mutation,
+\begin_inset Formula $\theta$
+\end_inset
+
+, 
+\begin_inset Formula $P(G=\left\langle R,R\right\rangle )=0$
+\end_inset
+
+, 
+\begin_inset Formula $P(G=\left\langle R,V_{1}\right\rangle )=\theta$
+\end_inset
+
+, 
+\begin_inset Formula $P(G=\left\langle V_{1},V_{1}\right\rangle )=\nicefrac{\theta}{2}$
+\end_inset
+
+, 
+\begin_inset Formula $P(G=\left\langle V_{1},V_{2}\right\rangle )=\theta^{2}$
+\end_inset
+
+where 
+\begin_inset Formula $\theta=0.001$
+\end_inset
+
+by default.
+ For the somatic prior, we can probably start with the assumption that the
+ prior is 
+\begin_inset Formula $10^{-6}$
+\end_inset
+
+.
+ Priors will need to be pre-calculated and take in user input if we are
+ to maximize our ability to distinguish the data, but we can probably assume
+ uniform priors to start.
+\end_layout
+
+\begin_layout Subsection
+General Notes
+\end_layout
+
+\begin_layout Itemize
+We will need to 
 \begin_inset Quotes eld
 \end_inset
 
@@ -222,29 +271,41 @@ denormalize
 \begin_inset Quotes erd
 \end_inset
 
- the likelihoods, probably and Ken agrees
+ the likelihoods in order to maintain compatibility between the tumor and
+ the normal likelihoods
 \end_layout
 
-\begin_layout Standard
+\begin_layout Itemize
 We will need to calculate likelihoods from Tumor Data, Normal Data and All
  Data.
 \end_layout
 
-\begin_layout Standard
+\begin_layout Itemize
 If this is to operate similarly as before, then we will only add up calculations
  where tumor and normal are the same genotype to get a somatic score
-\backslash
-
 \end_layout
 
-\begin_layout Standard
-Could we calculate for every possible genotype and choose the most likely
- one? I think probably and Ken agrees
+\begin_layout Itemize
+We can also calculate the likelihood for every possible genotype and choose
+ the most likely one.
 \end_layout
 
-\begin_layout Standard
-For the somatic genotypes does each likelihood need it's own prior? NO I
- don't think so.
+\begin_layout Itemize
+I will need to add in prior calculations as this seems to have vanished
+ between glfSomatic and bam-somaticsniper.
+ Amazing it is even working at all.
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+To do this, we need to ensure that the encodings assumed in bam match up
+ with expectation of what's in glf
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+We should make tests so that this sort of thing with missing priors doesn't
+ happen again
 \end_layout
 
 \end_body
