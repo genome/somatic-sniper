@@ -9,55 +9,68 @@
 #include "kstring.h"
 #include "somatic_sniper.h"
 
+//TODO not sure what these are for yet
 typedef int *indel_list_t;
 KHASH_MAP_INIT_INT64(64, indel_list_t)
-int get_next_pos(bam_plbuf_t *buf,bamFile fp); 
+
+//These duplicate what was in the BAM code and are largely useless at this point I think    
 #define BAM_PLF_SIMPLE     0x01
 #define BAM_PLF_CNS        0x02
 #define BAM_PLF_INDEL_ONLY 0x04
 #define BAM_PLF_GLF        0x08
 #define BAM_PLF_VAR_ONLY   0x10
+
+//Macros to improve clarity    
 #define HOMO_INDEL1 0
 #define HOMO_INDEL2 1
 #define HET_INDEL   2
-#define BAM_REF_BASE       0  //The 4bit encoding of a base matching the reference ie 0
+    
+#define BAM_REF_BASE       0  //The 4bit encoding of a base matching the reference
 #define BAM_N_BASE         15 //The 4bit encoding of the N base               
 
-static int qAddTable[1024];
-double THETA = 0.001 ;      /* population scaled mutation rate */
-int minimum_somatic_qual = 4; //minimum somatic phred score in order to report the site
-static int prior[16][10] ;  /* index over reference base, genotype */
+static int qAddTable[1024]; //This is a predefined table of adds in Phred space. It is filled upon execution
+
+double THETA = 0.001 ;      /* population scaled mutation rate. This is used to generate prior probabilities based on germline assumptions */
+static int prior[16][10] ;  /* index over reference base, genotype. Stores precalculated prior probabilities for germline assumption */
 
 /* glf genotype order is: AA/AC/AG/AT/CC/CG/CT/GG/GT/TT, or AMRWCSYGKT in IUPAC */
 static int glfBase[10] = { 1, 3, 5, 9, 2, 6, 10, 4, 12, 8 } ; /* mapping from 10 genotypes to 4 bit base coding */
 
 #define isHom(x) (x != BAM_REF_BASE && !(x & (x - 1))) //Test to see if the 4bit encoded nucleotide is Homozygous (a power of two). Got this off the web.
 #define isHet(y) (y != BAM_REF_BASE && y != BAM_N_BASE && (y & (y - 1)))    //Test to see if a 4bit encoded nucleotide is Heterozygous.
+
+//do phred equivalent of log(x + y) where both x and y are already in log space
 #define qAdd(x,y)  (x - qAddTable[512+y-x])
 
+//a big giant ass heng li type struct for storing variables that need to get passed to the callback
 typedef struct {
-    bam_header_t *h1;
-    bam_header_t *h2;
-    sniper_maqcns_t *c;
-    sniper_maqindel_opt_t *ido;
-    faidx_t *fai;
-    khash_t(64) *hash;
-    uint32_t format;
-    int tid, len, last_pos;
-    int mask;
-    int mapQ;
-    int min_somatic_qual;//for limiting snp calls in somatic sniper
-    char *ref;
-    glfFile fp; // for glf output only
+    bam_header_t *h1;   //probably tumor. This is a terrible name
+    bam_header_t *h2;   //probably normal TODO this is a terrible name too
+    sniper_maqcns_t *c; //options etc used by the snp calling model
+    sniper_maqindel_opt_t *ido; //options etc used by indel caller
+    faidx_t *fai;               //reference sequence index
+    khash_t(64) *hash;          //TODO figure out wtf this is for
+    uint32_t format;            //largely or entirely irrelevant
+    int tid, len, last_pos;     //info about where in the reference the program is at
+    int mask;                   //mask to determine what reads to allow
+    int mapQ;                   //minimum mapping quality value TODO Check this is true
+    int min_somatic_qual;   //for limiting snp calls in somatic sniper
+    char *ref;              //the reference seqeunce in characters for the current chromosome
+    glfFile fp;             // for glf output only TODO THis is irrelevant right?
 } pu_data2_t;
 
+//TODO determine what this is actually doing 
 int prob_indel(glf3_t* indel, int prior_prob, int likelihood_flag);
+
+
 sniper_maqindel_ret_t *sniper_somaticindelscore(int n, int pos, const sniper_maqindel_opt_t *mi, const bam_pileup1_t *pl, const char *ref, sniper_maqindel_ret_t *tumor_indel);
+
+//I assume these are actually from libbam but weren't declared in a header.
 char **__bam_get_lines(const char *fn, int *_n);
 void bam_init_header_hash(bam_header_t *header);
 int32_t bam_get_tid(const bam_header_t *header, const char *seq_name);
 
-
+//This calculates the posterior probabilities for single nucleotide variant position
 void calculatePosteriors(glf1_t *g, int lkResult[]) {
     unsigned char refBase = g->ref_base;
     int qSum = 255;
@@ -83,6 +96,8 @@ void calculatePosteriors(glf1_t *g, int lkResult[]) {
 
 }
 
+//This generates the germline priors based on the constant THETA. 
+//TODO add more comments on what the actually means
 void makeSoloPrior (void)
 {
     int i, b, ref ;
@@ -101,6 +116,8 @@ void makeSoloPrior (void)
         }
 }
 
+//Initialize the precalculated phred space add table
+//TODO try to explain wtf this is doing better
 static void qAddTableInit (void)
 {
     int i ;
@@ -211,7 +228,6 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
             qPosteriorSum = qAdd(qPosteriorSum, het_sum);
             qPosteriorSum = qAdd(qPosteriorSum, hom1_sum);
             qPosteriorSum = qAdd(qPosteriorSum, hom2_sum);
-            //if(minimum_somatic_qual >= qPosteriorSum) {  
             //print general info on the site in common among both tumor and normal
             fprintf(indel_fh, "%s\t%d\t*\t%d\t%s\t%s\t%d\t%d\t",d->h1->target_name[tid], pos + 1,qPosteriorSum, tumor_g3->indel_len[0] ? tumor_g3->indel_seq[0] : "*", tumor_g3->indel_len[1] ? tumor_g3->indel_seq[1] : "*", tumor_g3->indel_len[0], tumor_g3->indel_len[1]);
             //next output tumor specific info
@@ -228,7 +244,6 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
             fprintf(indel_fh,"%d\t%d\t%d\t%d\t", q->cnt1, q->cnt2, q->cnt_ambi, q->cnt_anti);
             fprintf(indel_fh,"%d\t%d\t%d\t%d\t", normal_g3->min_lk, normal_g3->lk[0], normal_g3->lk[1], normal_g3->lk[2]);
             fprintf(indel_fh,"%d\t%d\n", r->libs1, r->libs2);
-            //}
             glf3_destroy1(tumor_g3);
             glf3_destroy1(normal_g3);
 

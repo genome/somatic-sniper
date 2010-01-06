@@ -1,4 +1,4 @@
-#LyX 1.5.3 created this file. For more info see http://www.lyx.org/
+#LyX 1.6.4 created this file. For more info see http://www.lyx.org/
 \lyxformat 276
 \begin_document
 \begin_header
@@ -32,8 +32,8 @@
 \paperpagestyle default
 \tracking_changes false
 \output_changes false
-\author "" 
-\author "" 
+\author ""
+\author ""
 \end_header
 
 \begin_body
@@ -272,7 +272,16 @@ denormalize
 \end_inset
 
  the likelihoods in order to maintain compatibility between the tumor and
- the normal likelihoods
+ the normal likelihoods.
+ This can be done by 
+\emph on
+adding
+\emph default
+ the min_lk value of the glf field.
+ Looking over the samtools source, however, since both min_lk and the individual
+ likelihoods are capped at 255 the true value will not necessarily be known.We
+ may want to consider doing away with our glf dependence and hacking to
+ give ourselves the raw probabilities from the maqcns model.
 \end_layout
 
 \begin_layout Itemize
@@ -280,6 +289,20 @@ We will need to calculate likelihoods from Tumor Data, Normal Data and All
  Data.
 \end_layout
 
+\begin_deeper
+\begin_layout Itemize
+Not sure what the most efficient method of grabbing likelihoods for ALL
+ the data is.
+ Have reviewed the code.
+ It sucks.
+ I'm thinking perhaps we can have a third buffer and then somehow copy over
+ the pointers from both Tumor and Normal buffers into that one.
+ Probably would have to check that it successfully tracks the appropriate
+ maximum size ie both summed.
+ 
+\end_layout
+
+\end_deeper
 \begin_layout Itemize
 If this is to operate similarly as before, then we will only add up calculations
  where tumor and normal are the same genotype to get a somatic score
@@ -302,10 +325,28 @@ To do this, we need to ensure that the encodings assumed in bam match up
  with expectation of what's in glf
 \end_layout
 
+\begin_deeper
+\begin_layout Itemize
+I believe that I fixed this.
+ The encodings are the same and the previous makeSoloPrior function was
+ dropped in.
+ I have run a few simple tests and the result seems to be an increase in
+ specificity and a decrease in sensitivity (with somatic quality >40 and
+ RMS map quality >40).
+ As it seems to be dropping all the somatic scores across the board, this
+ is unsurprising? I'm also re-running AML11 with the priors to see if anything
+ new crops up.
+\end_layout
+
+\begin_layout Itemize
+This could probably stand to be verified in some way
+\end_layout
+
+\end_deeper
 \end_deeper
 \begin_layout Itemize
-We should make tests so that this sort of thing with missing priors doesn't
- happen again
+We should make tests or something so that this sort of thing with missing
+ priors doesn't happen again
 \end_layout
 
 \end_body
