@@ -106,11 +106,11 @@ sniper_maqcns_t *sniper_maqcns_init()
 	sniper_maqcns_t *bm;
 	bm = (sniper_maqcns_t*)calloc(1, sizeof(sniper_maqcns_t));
 	bm->aux = (sniper_bmc_aux_t*)calloc(1, sizeof(sniper_bmc_aux_t));
-	bm->het_rate = 0.001;
-	bm->theta = 0.85;
-	bm->n_hap = 2;
-	bm->eta = 0.03;
-	bm->cap_mapQ = 60;
+	bm->het_rate = 0.001;   //The population heterozygous rate
+	bm->theta = 0.85;       //error corection coefficient
+	bm->n_hap = 2;          //number of haplotypes
+	bm->eta = 0.03;         //TODO Don't know what this is. The error rate?
+	bm->cap_mapQ = 60;      //capping of mapping quality to help normalize between aligners. I don't like this.
 	return bm;
 }
 

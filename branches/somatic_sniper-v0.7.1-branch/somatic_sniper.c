@@ -30,22 +30,30 @@ KHASH_MAP_INIT_INT64(64, indel_list_t)
 
 static int qAddTable[1024]; //This is a predefined table of adds in Phred space. It is filled upon execution
 
-double THETA = 0.001 ;      /* population scaled mutation rate. This is used to generate prior probabilities based on germline assumptions */
-static int prior[16][10] ;  /* index over reference base, genotype. Stores precalculated prior probabilities for germline assumption */
 
 /* glf genotype order is: AA/AC/AG/AT/CC/CG/CT/GG/GT/TT, or AMRWCSYGKT in IUPAC */
 static int glfBase[10] = { 1, 3, 5, 9, 2, 6, 10, 4, 12, 8 } ; /* mapping from 10 genotypes to 4 bit base coding */
+static int baseGlf[16] = { -1, 0, 4, 1, 7, 2, 5, -1, 9, 3, 6, -1, 8, -1, -1, -1 } ; /* inverse of glfBase */
 
-#define isHom(x) (x != BAM_REF_BASE && !(x & (x - 1))) //Test to see if the 4bit encoded nucleotide is Homozygous (a power of two). Got this off the web.
-#define isHet(y) (y != BAM_REF_BASE && y != BAM_N_BASE && (y & (y - 1)))    //Test to see if a 4bit encoded nucleotide is Heterozygous.
+
+#define isHom(x) ((x) != BAM_REF_BASE && !((x) & ((x) - 1))) //Test to see if the 4bit encoded nucleotide is Homozygous (a power of two). Got this off the web.
+#define isHet(y) ((y) != BAM_REF_BASE && (y) != BAM_N_BASE && ((y) & ((y) - 1)))    //Test to see if a 4bit encoded nucleotide is Heterozygous.
+
+#define nt4_to_nt2(x) ( isHom(x) ? log2(x): (-1) )
 
 //do phred equivalent of log(x + y) where both x and y are already in log space
 #define qAdd(x,y)  (x - qAddTable[512+y-x])
 
+static int germline_priors[16][10] ;  /* index over reference base, genotype. Stores precalculated prior probabilities for germline assumption */
+static int diploid_transition_transversion[10][10]; //genotype transition/transversion probabilities.
+#define transitionProb  0.66666667
+#define transversionProb 0.16666667
+
+
 //a big giant ass heng li type struct for storing variables that need to get passed to the callback
 typedef struct {
-    bam_header_t *h1;   //probably tumor. This is a terrible name
-    bam_header_t *h2;   //probably normal TODO this is a terrible name too
+    bam_header_t *tumor_header;   //probably tumor. This is a terrible name
+    bam_header_t *normal_header;   //probably normal TODO this is a terrible name too
     sniper_maqcns_t *c; //options etc used by the snp calling model
     sniper_maqindel_opt_t *ido; //options etc used by indel caller
     faidx_t *fai;               //reference sequence index
@@ -56,12 +64,135 @@ typedef struct {
     int mapQ;                   //minimum mapping quality value TODO Check this is true
     int min_somatic_qual;   //for limiting snp calls in somatic sniper
     char *ref;              //the reference seqeunce in characters for the current chromosome
-    glfFile fp;             // for glf output only TODO THis is irrelevant right?
+    
+    //somatic specific
+    float somatic_rate; //rate of somatic point mutations
+
+    //new model for storing reads from both in relatively static memory
+    bam_pileup1_t *pl3;  //for storing both tumor and normal alignments
+    int max_n3; //for knowing how many tumor and normal alignments we have space for
+
+    
 } pu_data2_t;
 
 //TODO determine what this is actually doing 
 int prob_indel(glf3_t* indel, int prior_prob, int likelihood_flag);
 
+double transition_transversion_calc(int a, int b) {
+    if(abs(a-b) == 2) {
+        return transitionProb;
+    }
+    else {
+        return transversionProb;
+    }
+}
+
+void initialize_diploid_transition_transversion() {
+    int i,j;
+    for(i = 0; i < 10; ++i) {
+        for(j = 0; j < 10; ++j) {
+            //initialize based on the number of changes and phasing etc
+            if(i==j) {
+                diploid_transition_transversion[i][j] = 255;    //no change so no probability of change
+            }
+            else {
+                char a = glfBase[i];
+                char b = glfBase[j];
+                
+                //decompose into alleles, there must be a smarter way to do this
+                int a_alleles[2], b_alleles[2], num_alleles_in_a = 0, num_alleles_in_b = 0;
+                int bit = 0, a_allele_index = 0, b_allele_index = 0;//which bit we are dealing with
+                //expand into an array of values indicating whether or not the bits are set
+                for(bit=0; bit < 4; bit++) {
+                    int a_bit_set = (a>>bit) & 1;
+                    int b_bit_set = (b>>bit) & 1;
+                    if(a_bit_set) {
+                        a_alleles[a_allele_index] = bit;
+                        a_allele_index++;
+                        num_alleles_in_a++;
+                    }
+                    if(b_bit_set) {
+                        b_alleles[b_allele_index] = bit;
+                        b_allele_index++;
+                        num_alleles_in_b++;
+                    }
+                }
+
+                if(num_alleles_in_a == 1) {
+                    if(num_alleles_in_b == 1) {
+                        //both are homozygous, probability is the change squared
+                        double prob = transition_transversion_calc(a_alleles[0],b_alleles[0]);
+                        diploid_transition_transversion[i][j] = logPhred(prob * prob);
+                    }
+                    else {
+                        //a is hom and b is het, the probability is the prob of different alleles * each other
+                        int b_allele;
+                        double prob = 1.0;
+                        for(b_allele = 0; b_allele < 2; b_allele++) {
+                            if(b_alleles[b_allele] != a_alleles[0]) {
+                                prob *= transition_transversion_calc(a_alleles[0],b_alleles[b_allele]);
+                            }
+                        }
+                        diploid_transition_transversion[i][j] = logPhred(prob);
+                    }
+
+                }
+                else {
+                    if(num_alleles_in_b == 1) {
+                        //is b is hom and a is het, the prob is the same as for same situation above 
+                        int a_allele;
+                        double prob = 1.0;
+                        for(a_allele = 0; a_allele < 2; a_allele++) {
+                            if(a_alleles[a_allele] != b_alleles[0]) {
+                                prob *= transition_transversion_calc(b_alleles[0],a_alleles[a_allele]);
+                            }
+                        }
+                        diploid_transition_transversion[i][j] = logPhred(prob);
+
+                    }
+                    else {
+                        //if both are het then it is the product of the combination of those alleles divided by two (number of combinations)
+                        diploid_transition_transversion[i][j] = logPhred( transition_transversion_calc(a_alleles[0],b_alleles[0]) * transition_transversion_calc(a_alleles[1],b_alleles[1]) + transition_transversion_calc(a_alleles[0],b_alleles[1]) * transition_transversion_calc(a_alleles[1],b_alleles[0])) - logPhred(2);    
+                    }
+                }
+            }
+        }
+    }
+}
+
+void print_transition_tranversion_priors() {
+    int i,j;
+    for(i = 0; i < 10; ++i) {
+        char a = bam_nt16_rev_table[glfBase[i]];
+        fprintf(stderr,"\t%c",a);
+    }
+    fprintf(stderr,"\n");
+    for(i = 0; i < 10; ++i) {
+        char a = bam_nt16_rev_table[glfBase[i]];
+        fprintf(stderr,"%c",a);
+        for(j = 0; j < 10; ++j) {
+           fprintf(stderr,"\t%i",diploid_transition_transversion[i][j]);
+        }
+        fprintf(stderr,"\n");
+    }
+}
+
+void print_germline_priors() {
+    int i,j;
+    for(j = 0; j < 10; ++j) {
+        char b = bam_nt16_rev_table[glfBase[j]];
+        fprintf(stderr,"\t%c",b);
+    }
+    fprintf(stderr,"\n");
+    for(i = 0; i < 16; ++i) {
+        char a = bam_nt16_rev_table[i];
+        fprintf(stderr,"%c",a);
+        for(j = 0; j < 10; ++j) {
+           fprintf(stderr,"\t%i",germline_priors[i][j]);
+        }
+        fprintf(stderr,"\n");
+    }
+}
 
 sniper_maqindel_ret_t *sniper_somaticindelscore(int n, int pos, const sniper_maqindel_opt_t *mi, const bam_pileup1_t *pl, const char *ref, sniper_maqindel_ret_t *tumor_indel);
 
@@ -79,8 +210,8 @@ void calculatePosteriors(glf1_t *g, int lkResult[]) {
 
     //Calculate Posteriors
     for (j = 0 ; j < 10 ; ++j) { 
-        int x = g->lk[j] + prior[refBase][j];
-        qSum = qAdd (x, qSum) ;
+        int x = g->lk[j] + germline_priors[refBase][j];
+        qSum = qAdd(x, qSum) ;
         if (x < qMin) qMin = x ;
         lkResult[j] = x ;
     }
@@ -96,25 +227,60 @@ void calculatePosteriors(glf1_t *g, int lkResult[]) {
 
 }
 
+int logAdd(int x, int y) {
+    return (x + logPhred(1.0 + expPhred( abs(y - x) ) ) );
+}
+
+int prior_for_genotype(int tumor_genotype, int normal_genotype, int ref) {
+
+    if(tumor_genotype == normal_genotype) {
+        return germline_priors[ref][tumor_genotype];
+    }
+    else {
+        //assuming uniform priors for every possible somatic genotype ie 10x10 combinations - 10 germline = 90 somatic right now
+        //TODO change to transition/transversion
+        return diploid_transition_transversion[normal_genotype][tumor_genotype];
+    }
+
+}
+
+void print_glf(glf1_t *g) {
+    fprintf(stderr, "\tmin_lk: %d\n",g->min_lk);
+    int i = 0;
+
+    for(i=0; i<10; i++) {
+        fprintf(stderr, "\t%c: %d\n",bam_nt16_rev_table[glfBase[i]],g->lk[i]);
+    }
+
+}
+
 //This generates the germline priors based on the constant THETA. 
 //TODO add more comments on what the actually means
-void makeSoloPrior (void)
-{
+void initialize_germline_priors (int germline_priors[][10], float prior) {
     int i, b, ref ;
 
-    for (ref = 0 ; ref < 16 ; ++ref)
-        for (i = 0 ; i < 10 ; ++i)
-        { b = glfBase[i] ;
-            if (!(b & ~ref))	/* ie b is compatible with ref */
-                prior[ref][i] = 0 ;
-            else if (b & ref)	/* ie one allele of b is compatible with ref */
-                prior[ref][i] = logPhred(THETA) ;
-            else if (isHom(b))	/* single mutation homozygote */
-                prior[ref][i] = logPhred(0.5*THETA) ;
-            else			/* two mutations */
-                prior[ref][i] = logPhred(THETA*THETA) ;
+    for (ref = 0 ; ref < 16 ; ++ref) {
+        for (i = 0 ; i < 10 ; ++i) { 
+            b = glfBase[i];
+            int r = baseGlf[ref];
+            if(r > -1) {
+
+                if (!(b & ~ref))	/* ie b is compatible with ref */
+                    germline_priors[ref][i] = 0;
+                else if (b & ref)	/* ie one allele of b is compatible with ref */
+                    germline_priors[ref][i] = logPhred(prior) + diploid_transition_transversion[r][i];
+                else if (isHom(b))	/* single mutation homozygote */
+                    germline_priors[ref][i] = logPhred(0.5*prior) + diploid_transition_transversion[r][i];
+                else			/* two mutations */
+                    germline_priors[ref][i] = logPhred(prior*prior) + diploid_transition_transversion[r][i];
+            }
+            else {
+                germline_priors[ref][i] = 255;  //make non homozygous reference bases really unlikely...FIXME at some point when we care
+            }
         }
+    }
 }
+
 
 //Initialize the precalculated phred space add table
 //TODO try to explain wtf this is doing better
@@ -156,53 +322,98 @@ glf3_t *sniper_maqindel2glf(sniper_maqindel_ret_t *r, int n) {
 static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t *pl1, const bam_pileup1_t *pl2, void *data, FILE *snp_fh, FILE *indel_fh) {
     //hacked copy from function gl3_func behavior to get a g with 10 probabilities to do somatic probability calculation    
     pu_data2_t *d = (pu_data2_t*)data;
+
+    //fix up accumulated alignments from tumor AND normal
+    /*if((n1 + n2) > d->max_n3) {
+        //allocate space to store the reads
+        d->pl3 = realloc(d->pl3, sizeof(bam_pileup1_t) * (n1 + n2));
+        if(!d->pl3) {
+            fprintf(stderr, "Couldn't allocate memory for tumor/normal combined reads\n");
+            exit(1);
+        }
+        else {
+            d->max_n3 = n1 + n2;
+        }
+    }
+
+    //copy over tumor and normal reads
+    memcpy(d->pl3,pl1,sizeof(bam_pileup1_t)*n1);
+    memcpy(d->pl3 + n1, pl2, sizeof(bam_pileup1_t)*n2); //I hope to god this works
+      */      
+
     sniper_maqindel_ret_t *r = 0;
     if (d->fai && (int)tid != d->tid) {
         free(d->ref);
-        d->ref = fai_fetch(d->fai, d->h1->target_name[tid], &d->len);
+        d->ref = fai_fetch(d->fai, d->tumor_header->target_name[tid], &d->len);
         d->tid = tid;
     }
     int rb = (d->ref && (int)pos < d->len)? d->ref[pos] : 'N';
+    int rb4 = bam_nt16_table[rb];
 
-    int lkTumor[10], lkNormal[10];
+    int lkSomatic[10][10];
 
     int qPosteriorSum = 255;
+    int qSomatic = 255;
+    int qProbabilityData = 255;
 
     glf1_t *gTumor =sniper_maqcns_glfgen(n1, pl1, bam_nt16_table[rb], d->c);
+    //fprintf(stderr, "Tumor likelihood for %d:\n",pos+1);
+    //print_glf(gTumor);
     glf1_t *gNormal =sniper_maqcns_glfgen(n2, pl2, bam_nt16_table[rb], d->c);
+    //fprintf(stderr, "Normal likelihood for %d:\n",pos+1);
+    //print_glf(gNormal);
+    //glf1_t *gAll = sniper_maqcns_glfgen(n1 + n2, d->pl3, bam_nt16_table[rb], d->c);
+    //fprintf(stderr, "All likelihood for %d:\n",pos+1);
+    //print_glf(gAll);
+        
     //now we have the filled g1,g2 to compare with code from larsons's glfSomatic
+    
     if (rb != 'N' && gTumor->depth > 0 && gNormal->depth > 0) {
-        //calculate tumor posteriors
-        //fprintf(stderr,"---Tumor---\n");
-        //printGLF(&gTumor);
-
-        uint32_t x;
-        x = sniper_maqcns_call(n1, pl1, d->c);
-        int  ref_q, rb4 = bam_nt16_table[rb];
-        if (rb4 != 15 && x>>28 != 15 && x>>28 != rb4) { // a SNP
-            ref_q = 0;
-            if (rb4 != 15 && x>>28 != 15 && x>>28 != rb4) { // a SNP
-                ref_q = ((x>>24&0xf) == rb4)? x>>8&0xff : (x>>8&0xff) + (x&0xff);
-                if (ref_q > 255) ref_q = 255;
+        //calculate posteriors
+            int tumor, normal;
+            int min_lk_tumor_genotype = -1, min_lk_normal_genotype = -1, min_joint_lk = 1000;
+            for(tumor = 0; tumor < 10; tumor++) {
+                for(normal = 0; normal < 10; normal++) {
+                    if(tumor==normal) {
+                        //then they are germline and the posterior probability is the likelihood generated from all the data 
+                        //lkSomatic[tumor][normal] = (gAll->lk[tumor] + gAll->min_lk) + prior_for_genotype(tumor,normal,rb4) + logPhred(1 - d->somatic_rate); 
+                        lkSomatic[tumor][normal] = (gTumor->lk[tumor] + gTumor->min_lk) + (gNormal->lk[normal] + gNormal->min_lk) + prior_for_genotype(tumor,normal,rb4) + logPhred(1 - d->somatic_rate);
+                    }
+                    else {
+                        lkSomatic[tumor][normal] = (gTumor->lk[tumor] + gTumor->min_lk) + (gNormal->lk[normal] + gNormal->min_lk) + prior_for_genotype(tumor,normal,rb4) + logPhred(d->somatic_rate);
+                    }
+                    if(lkSomatic[tumor][normal] > 255) {
+                        lkSomatic[tumor][normal] = 255;
+                    }
+                    qProbabilityData = qAdd(lkSomatic[tumor][normal],qProbabilityData );
+                    if(lkSomatic[tumor][normal] < min_joint_lk) {
+                        min_joint_lk = lkSomatic[tumor][normal];
+                        min_lk_normal_genotype = normal;
+                        min_lk_tumor_genotype = tumor;
+                    }
+                }
             }
-
-            calculatePosteriors(gTumor, lkTumor);
-            //iprintLikelihoods(lkTumor);
-            //fprintf(stderr,"---Normal---\n");
-            //printGLF(&gNormal);
-            calculatePosteriors(gNormal, lkNormal);
-            //iprintLikelihoods(lkNormal);
-            int j;
-            for(j = 0; j < 10; j++) {
-                qPosteriorSum = qAdd(qPosteriorSum,(lkTumor[j] + lkNormal[j]));
+            for(tumor = 0; tumor < 10; tumor++) {
+                for(normal = 0; normal < 10; normal++) {
+                    lkSomatic[tumor][normal] -= qProbabilityData;
+                    //cap low likelihoods
+                    if(lkSomatic[tumor][normal] > 255) {
+                        lkSomatic[tumor][normal] = 255;
+                    }   
+                    if(tumor != min_lk_tumor_genotype && normal != min_lk_normal_genotype)
+                        qPosteriorSum = qAdd(lkSomatic[tumor][normal],qPosteriorSum);
+                    if(tumor == normal) {
+                        qSomatic = qAdd(lkSomatic[tumor][normal], qSomatic);
+                    }
+                }
             }
 
             // int result = qAdd(0,-qPosteriorSum);
-            if(d->min_somatic_qual <= qPosteriorSum) {  
-                fprintf(snp_fh, "%s\t%d\t%c\t%c\t%d\t%d\t%d\t%d\t%d\t%d\n",d->h1->target_name[tid], pos + 1 , rb, bam_nt16_rev_table[x>>28], qPosteriorSum, x>>8&0xff, ref_q, x>>16&0xff, n1, n2);
+            if(d->min_somatic_qual <= qSomatic) {  
+                fprintf(snp_fh, "%s\t%d\t%c\t%c\t%c\t%d\t%d\t%d\t%d\n",d->tumor_header->target_name[tid], pos + 1 , rb, bam_nt16_rev_table[glfBase[min_lk_tumor_genotype]], bam_nt16_rev_table[glfBase[min_lk_normal_genotype]], qSomatic, qPosteriorSum, n1, n2);
             }
-        }    
-        r = sniper_maqindel(n1, pos, d->ido, pl1, d->ref, 0,0, d->h1);
+            
+        r = sniper_maqindel(n1, pos, d->ido, pl1, d->ref, 0,0, d->tumor_header);
         if (r) {
             sniper_maqindel_ret_t *q=0;
             glf3_t *tumor_g3=0, *normal_g3=0;
@@ -229,7 +440,7 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
             qPosteriorSum = qAdd(qPosteriorSum, hom1_sum);
             qPosteriorSum = qAdd(qPosteriorSum, hom2_sum);
             //print general info on the site in common among both tumor and normal
-            fprintf(indel_fh, "%s\t%d\t*\t%d\t%s\t%s\t%d\t%d\t",d->h1->target_name[tid], pos + 1,qPosteriorSum, tumor_g3->indel_len[0] ? tumor_g3->indel_seq[0] : "*", tumor_g3->indel_len[1] ? tumor_g3->indel_seq[1] : "*", tumor_g3->indel_len[0], tumor_g3->indel_len[1]);
+            fprintf(indel_fh, "%s\t%d\t*\t%d\t%s\t%s\t%d\t%d\t",d->tumor_header->target_name[tid], pos + 1,qPosteriorSum, tumor_g3->indel_len[0] ? tumor_g3->indel_seq[0] : "*", tumor_g3->indel_len[1] ? tumor_g3->indel_seq[1] : "*", tumor_g3->indel_len[0], tumor_g3->indel_len[1]);
             //next output tumor specific info
             if (r->gt < 2) fprintf(indel_fh,"%s/%s\t", r->s[r->gt], r->s[r->gt]);
             else fprintf(indel_fh,"%s/%s\t", r->s[0], r->s[1]);
@@ -263,23 +474,33 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
 
 int main(int argc, char *argv[])
 {
-    int c;
-    char *fn_fa = 0;
-    pu_data2_t *d = (pu_data2_t*)calloc(1, sizeof(pu_data2_t));
-    d->min_somatic_qual=0;
-    d->tid = -1; d->mask = BAM_DEF_MASK; d->mapQ = 0;
+    int c;  //For processing command line options
+    char *fn_fa = NULL;    //pointer to the reference sequence filename
+    
+    pu_data2_t *d = (pu_data2_t*)calloc(1, sizeof(pu_data2_t)); //This stores file info and variables related to the calculating of likelihoods 
+    
+    //initialize some basic filter variables
+    d->min_somatic_qual = 0;  //by default there is no minimum somatic quality
+    d->tid = -1; //stores the current chromosome
+    d->mask = BAM_DEF_MASK; 
+    d->mapQ = 0;
+    d->somatic_rate = 0.00001; //default to 1e-6. TODO test some other possible values
     d->c = sniper_maqcns_init();
     d->ido = sniper_maqindel_opt_init();
-    while ((c = getopt(argc, argv, "f:T:N:r:I:G:q:Q:")) >= 0) {
+    d->pl3 = NULL;
+    d->max_n3 = 0;
+    
+    while ((c = getopt(argc, argv, "f:T:N:r:I:G:q:Q:s:")) >= 0) {
         switch (c) {
-            case 'f': fn_fa = strdup(optarg); break;
-            case 'T': d->c->theta = atof(optarg); break;
-            case 'N': d->c->n_hap = atoi(optarg); break;
-            case 'r': d->c->het_rate = atoi(optarg); break;
-            case 'q': d->mapQ = atoi(optarg); break;
-            case 'I': d->ido->q_indel = atoi(optarg); break;
-            case 'G': d->ido->r_indel = atof(optarg); break;
-            case 'Q': d->min_somatic_qual = atoi(optarg); break;         
+            case 'f': fn_fa = strdup(optarg); break;    //reference file name.
+            case 'T': d->c->theta = atof(optarg); break;    //error correlation correction
+            case 'N': d->c->n_hap = atoi(optarg); break;    //number of haplotypes
+            case 'r': d->c->het_rate = atoi(optarg); break; //het rate of the population
+            case 'q': d->mapQ = atoi(optarg); break;        //minimum mapping quality
+            case 'I': d->ido->q_indel = atoi(optarg); break;    //probability of indel in prep
+            case 'G': d->ido->r_indel = atof(optarg); break;    //probability of a indel between haplotypes
+            case 'Q': d->min_somatic_qual = atoi(optarg); break;//minimum somatic quality to report of SNVs         
+            case 's': d->somatic_rate = atof(optarg); break;   //probability of observing a somatic point mutuation         
             default: fprintf(stderr, "Unrecognizd option '-%c'.\n", c); return 1;
         }
     }
@@ -291,16 +512,18 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Options: \n");
         fprintf(stderr, "        -q INT    filtering reads with mapping quality less than INT [%d]\n", d->mapQ);
         fprintf(stderr, "        -Q INT    filtering somatic snp output(NOT INDELS!) with somatic quality less than  INT [15]\n");
-        fprintf(stderr, "        -T FLOAT  theta in maq consensus calling model (for -c/-g) [%f]\n", d->c->theta);
-        fprintf(stderr, "        -N INT    number of haplotypes in the sample (for -c/-g) [%d]\n", d->c->n_hap);
-
-        fprintf(stderr, "        -r FLOAT  prior of a difference between two haplotypes (for -c/-g) [%f]\n", d->c->het_rate);
-        fprintf(stderr, "        -G FLOAT  prior of an indel between two haplotypes (for -c/-g) [%f]\n", d->ido->r_indel);
-        fprintf(stderr, "        -I INT    phred prob. of an indel in sequencing/prep. (for -c/-g) [%d]\n", d->ido->q_indel);
+        fprintf(stderr, "        -T FLOAT  theta in maq consensus calling model [%f]\n", d->c->theta);
+        fprintf(stderr, "        -N INT    number of haplotypes in the sample [%d]\n", d->c->n_hap);
+        fprintf(stderr, "        -r FLOAT  prior of a difference between two haplotypes in the population [%f]\n", d->c->het_rate);
+        fprintf(stderr, "        -G FLOAT  prior of an indel between two haplotypes [%f]\n", d->ido->r_indel);
+        fprintf(stderr, "        -I INT    phred prob. of an indel in sequencing/prep [%d]\n", d->ido->q_indel);
+        fprintf(stderr, "        -s FLOAT  prior of a somatic point mutation occuring [%f]\n", d->somatic_rate);
         fprintf(stderr, "\n");
         free(fn_fa); sniper_maqcns_destroy(d->c); free(d->ido); free(d);
         return 1;
     }
+
+    //Handle the reading of the reference sequence and alert the user that it is a required option. TODO discuss fixing this with others.
     if (fn_fa) {
         d->fai = fai_load(fn_fa);
     }
@@ -309,39 +532,74 @@ int main(int argc, char *argv[])
         sniper_maqcns_destroy(d->c);
         free(d->ido); 
         free(d);
-        exit(1);
+        return 1; 
     }
     free(fn_fa);
-    sniper_maqcns_prepare(d->c);
+
+    //Prepare to run the caller
+    sniper_maqcns_prepare(d->c); //This precalculates some tables.
+    qAddTableInit();    //Initialize a precalculated table of phred space additions ie when x and y are log space and you need log(x + y)
+    initialize_diploid_transition_transversion();
+    print_transition_tranversion_priors();
+    fprintf(stderr,"\n\n");
+
+    //Make sure to initialize these after the transition/transversion as they are interdependent
+    initialize_germline_priors(germline_priors, d->c->het_rate);   //for now use the popeulation het rate 
+    print_germline_priors();
+    fprintf(stderr,"\n\n");
+    
     fprintf(stderr,"Preparing to snipe some somatics\n");
-    bamFile fp1, fp2;
-    qAddTableInit();
-    makeSoloPrior();
-    fp1 = (strcmp(argv[optind], "-") == 0)? bam_dopen(fileno(stdin), "r") : bam_open(argv[optind], "r");
-    fprintf(stderr, "Normal bam is %s\n", argv[optind+1]);
-    fprintf(stderr, "Tumor bam is %s\n", argv[optind]);
-    d->h1 = bam_header_read(fp1);
-    sam_header_parse_rg(d->h1);
-    fp2 = bam_open(argv[optind+1], "r");
-    d->h2 = bam_header_read(fp2);
-    sam_header_parse_rg(d->h2);
+    bamFile tumor_fp, normal_fp;
+    tumor_fp = bam_open(argv[optind], "r"); 
+    if(tumor_fp) {
+        fprintf(stderr, "Tumor bam is %s\n", argv[optind]);
+        d->tumor_header = bam_header_read(tumor_fp);    //FIXME check an error code here
+        sam_header_parse_rg(d->tumor_header);           //FIXME check an error code here
+    }
+    else {
+        fprintf(stderr, "Unable to open %s as tumor bam file\n",argv[optind]);
+        if (d->fai) fai_destroy(d->fai);
+        sniper_maqcns_destroy(d->c);
+        free(d->ido); free(d->ref); free(d);
+        return 1;    
+    }
+
+    //open the normal bam file and parse the header
+    normal_fp = bam_open(argv[optind+1], "r");
+    if(normal_fp) {
+        fprintf(stderr, "Normal bam is %s\n", argv[optind+1]);
+        d->normal_header = bam_header_read(normal_fp);  //FIXME check and error here
+        sam_header_parse_rg(d->normal_header);          //FIXME check for an error here
+    }
+    else {
+        fprintf(stderr, "Unable to open %s as tumor bam file\n",argv[optind]);
+        bam_close(tumor_fp);
+        bam_header_destroy(d->tumor_header);
+        if (d->fai) fai_destroy(d->fai);
+        sniper_maqcns_destroy(d->c);
+        free(d->ido); free(d->ref); free(d);
+        return 1;    
+    }
+    
+
+
     FILE* snp_fh = fopen(argv[optind+2], "w");
     FILE* indel_fh = fopen(argv[optind+3], "w");
 
     if(snp_fh && indel_fh) {
         //NEED TO ADD IN AN ACTUAL FUNCTION NAME HERE
-        bam_sspileup_file(fp1, fp2, d->mask, d->mapQ, glf_somatic, d, snp_fh, indel_fh);
+        bam_sspileup_file(tumor_fp, normal_fp, d->mask, d->mapQ, glf_somatic, d, snp_fh, indel_fh);
     }
     else {
         fprintf(stderr, "Unable to open snp or indel files!!!!!!!!!\n");
         exit(1);
     }
 
-    bam_close(fp1);
-    bam_close(fp2);
+    bam_close(tumor_fp);
+    bam_close(normal_fp);
     kh_destroy(64, d->hash);
-    bam_header_destroy(d->h1);
-    bam_header_destroy(d->h2);
+    bam_header_destroy(d->tumor_header);
+    bam_header_destroy(d->normal_header);
     if (d->fai) fai_destroy(d->fai);
     sniper_maqcns_destroy(d->c);
     free(d->ido); free(d->ref); free(d);

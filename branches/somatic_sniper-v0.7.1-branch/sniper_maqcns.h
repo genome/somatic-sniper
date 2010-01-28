@@ -8,11 +8,12 @@ struct __sbmc_aux_t;
 typedef struct {
 	float het_rate, theta;
 	int n_hap, cap_mapQ;
-
+    
 	float eta, q_r;
 	double *fk, *coef;
 	double *lhet;
 	struct __sbmc_aux_t *aux;
+
 } sniper_maqcns_t;
 
 typedef struct {

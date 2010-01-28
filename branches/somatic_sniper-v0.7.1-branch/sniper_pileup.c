@@ -229,6 +229,7 @@ int bam_sspileup_file(bamFile fp1, bamFile fp2, int mask, int thresh, bam_sspile
     int ret1 = -1, ret2 = -1;
     buf1 = bam_plbuf_init(NULL, func_data);
     buf2 = bam_plbuf_init(NULL, func_data);
+    
 
     bam_plbuf_set_mask(buf1, mask);
     bam_plbuf_set_mask(buf2, mask);
