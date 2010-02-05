@@ -243,15 +243,16 @@ int bam_sspileup_file(bamFile fp1, bamFile fp2, int mask, int thresh, bam_sspile
     //   fprintf(stdout, "normal_minlk\tnormal_hom_allele1_lk\tnormal_hom_allele2_lk\tnormal_het\n");
 
     while ((ret1 = get_next_pos(buf1, fp1)) >= 0 && (ret2 = get_next_pos(buf2, fp2)) >= 0) {
-        if(buf2->tid > buf1->tid) {
-            //no more normal data. Need to catch up
-            while(buf2->tid > buf1->tid && (ret1 = get_next_pos(buf1, fp1)) >= 0);
-        }
-        if(buf1->tid > buf2->tid) {
-            //no more tumor data
-            while(buf2->tid < buf1->tid && (ret2 = get_next_pos(buf2, fp2)) >= 0);
-        }
-        assert(buf2->tid == buf1->tid && buf2->pos == buf1->pos);           
+        do {
+            if(buf2->tid > buf1->tid) {
+                //no more normal data. Need to catch up
+                while(buf2->tid > buf1->tid && (ret1 = get_next_pos(buf1, fp1)) >= 0);
+            }
+            if(buf1->tid > buf2->tid) {
+                //no more tumor data
+                while(buf2->tid < buf1->tid && (ret2 = get_next_pos(buf2, fp2)) >= 0);
+            }
+        } while(buf2->tid != buf1->tid && buf2->pos != buf1->pos);  //removed assert and added this to hopefully deal with tids with no data
         if(ret1 && ret2) {
             func(buf1->tid, buf1->pos, ret1, ret2, buf1->pu, buf2->pu, buf1->func_data, snp_fh, indel_fh);
         }
