@@ -49,6 +49,8 @@ static int diploid_transition_transversion[10][10]; //genotype transition/transv
 #define transitionProb  0.66666667
 #define transversionProb 0.16666667
 
+int logAdd(int a, int c);
+
 
 //a big giant ass heng li type struct for storing variables that need to get passed to the callback
 typedef struct {
@@ -170,10 +172,13 @@ void print_transition_tranversion_priors() {
     for(i = 0; i < 10; ++i) {
         char a = bam_nt16_rev_table[glfBase[i]];
         fprintf(stderr,"%c",a);
+        int sum = 255;
         for(j = 0; j < 10; ++j) {
-           fprintf(stderr,"\t%i",diploid_transition_transversion[i][j]);
+           //fprintf(stderr,"\t%i",diploid_transition_transversion[i][j]);
+           fprintf(stderr,"\t%f",expPhred(diploid_transition_transversion[i][j]));
+           sum = logAdd(sum,diploid_transition_transversion[i][j]);
         }
-        fprintf(stderr,"\n");
+        fprintf(stderr,"\tSum: %d\n", sum);
     }
 }
 
@@ -186,11 +191,13 @@ void print_germline_priors() {
     fprintf(stderr,"\n");
     for(i = 0; i < 16; ++i) {
         char a = bam_nt16_rev_table[i];
+        int sum = 1000;
         fprintf(stderr,"%c",a);
         for(j = 0; j < 10; ++j) {
            fprintf(stderr,"\t%i",germline_priors[i][j]);
+           sum = logAdd(sum, germline_priors[i][j]);
         }
-        fprintf(stderr,"\n");
+        fprintf(stderr,"\tSum: %d\n", sum);
     }
 }
 
@@ -200,6 +207,16 @@ sniper_maqindel_ret_t *sniper_somaticindelscore(int n, int pos, const sniper_maq
 char **__bam_get_lines(const char *fn, int *_n);
 void bam_init_header_hash(bam_header_t *header);
 int32_t bam_get_tid(const bam_header_t *header, const char *seq_name);
+
+//phred space log add
+int logAdd(int a, int c) {
+    if(a < c) {
+        return (a + logPhred(1.0 + expPhred(c - a) ) );
+    } 
+    else {
+        return (c + logPhred(1.0 + expPhred(a - c) ) );
+    }
+}
 
 //This calculates the posterior probabilities for single nucleotide variant position
 void calculatePosteriors(glf1_t *g, int lkResult[]) {
@@ -211,7 +228,7 @@ void calculatePosteriors(glf1_t *g, int lkResult[]) {
     //Calculate Posteriors
     for (j = 0 ; j < 10 ; ++j) { 
         int x = g->lk[j] + germline_priors[refBase][j];
-        qSum = qAdd(x, qSum) ;
+        qSum = logAdd(x, qSum) ;
         if (x < qMin) qMin = x ;
         lkResult[j] = x ;
     }
@@ -227,9 +244,6 @@ void calculatePosteriors(glf1_t *g, int lkResult[]) {
 
 }
 
-int logAdd(int x, int y) {
-    return (x + logPhred(1.0 + expPhred( abs(y - x) ) ) );
-}
 
 int prior_for_genotype(int tumor_genotype, int normal_genotype, int ref) {
 
@@ -382,10 +396,11 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
                     else {
                         lkSomatic[tumor][normal] = (gTumor->lk[tumor] + gTumor->min_lk) + (gNormal->lk[normal] + gNormal->min_lk) + prior_for_genotype(tumor,normal,rb4) + logPhred(d->somatic_rate);
                     }
-                    if(lkSomatic[tumor][normal] > 255) {
+/*                    if(lkSomatic[tumor][normal] > 255) {
                         lkSomatic[tumor][normal] = 255;
                     }
-                    qProbabilityData = qAdd(lkSomatic[tumor][normal],qProbabilityData );
+                    */
+                    qProbabilityData = logAdd(lkSomatic[tumor][normal],qProbabilityData );
                     if(lkSomatic[tumor][normal] < min_joint_lk) {
                         min_joint_lk = lkSomatic[tumor][normal];
                         min_lk_normal_genotype = normal;
@@ -401,16 +416,18 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
                         lkSomatic[tumor][normal] = 255;
                     }   
                     if(tumor != min_lk_tumor_genotype && normal != min_lk_normal_genotype)
-                        qPosteriorSum = qAdd(lkSomatic[tumor][normal],qPosteriorSum);
+                        qPosteriorSum = logAdd(lkSomatic[tumor][normal],qPosteriorSum);
                     if(tumor == normal) {
-                        qSomatic = qAdd(lkSomatic[tumor][normal], qSomatic);
+                        qSomatic = logAdd(lkSomatic[tumor][normal], qSomatic);
                     }
                 }
             }
 
-            // int result = qAdd(0,-qPosteriorSum);
+            // int result = logAdd(0,-qPosteriorSum);
             if(d->min_somatic_qual <= qSomatic) {  
                 fprintf(snp_fh, "%s\t%d\t%c\t%c\t%c\t%d\t%d\t%d\t%d\n",d->tumor_header->target_name[tid], pos + 1 , rb, bam_nt16_rev_table[glfBase[min_lk_tumor_genotype]], bam_nt16_rev_table[glfBase[min_lk_normal_genotype]], qSomatic, qPosteriorSum, n1, n2);
+                //original caller compatible format
+                //fprintf(snp_fh, "%s\t%d\t%c\t%c\t%d\t%d\t%d\t%d\n",d->tumor_header->target_name[tid], pos + 1 , rb, bam_nt16_rev_table[glfBase[min_lk_tumor_genotype]], qSomatic, qPosteriorSum, n1, n2);
             }
             
         r = sniper_maqindel(n1, pos, d->ido, pl1, d->ref, 0,0, d->tumor_header);
@@ -436,9 +453,9 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
             int hom1_sum = (hom1indeltumor+hom1indelnormal) > 255 ? 255 : hom1indeltumor+hom1indelnormal;  
             int hom2_sum = (hom2indeltumor+hom2indelnormal) > 255 ? 255 : hom2indeltumor+hom2indelnormal;  
             //fprintf(stdout,"het_sum:%d\thom1_sum%d\t:hom2_sum%d\n", het_sum, hom1_sum, hom2_sum);
-            qPosteriorSum = qAdd(qPosteriorSum, het_sum);
-            qPosteriorSum = qAdd(qPosteriorSum, hom1_sum);
-            qPosteriorSum = qAdd(qPosteriorSum, hom2_sum);
+            qPosteriorSum = logAdd(qPosteriorSum, het_sum);
+            qPosteriorSum = logAdd(qPosteriorSum, hom1_sum);
+            qPosteriorSum = logAdd(qPosteriorSum, hom2_sum);
             //print general info on the site in common among both tumor and normal
             fprintf(indel_fh, "%s\t%d\t*\t%d\t%s\t%s\t%d\t%d\t",d->tumor_header->target_name[tid], pos + 1,qPosteriorSum, tumor_g3->indel_len[0] ? tumor_g3->indel_seq[0] : "*", tumor_g3->indel_len[1] ? tumor_g3->indel_seq[1] : "*", tumor_g3->indel_len[0], tumor_g3->indel_len[1]);
             //next output tumor specific info
@@ -614,7 +631,7 @@ int prob_indel(glf3_t* indel, int prior_prob, int likelihood_flag) {
     int qSum=255;  
     for (i=0; i < 3; i++) {
         int lk_prior= (int)indel->lk[i] + prior_prob;
-        qSum = qAdd(lk_prior, qSum);
+        qSum = logAdd(lk_prior, qSum);
     }
     return (indel->lk[likelihood_flag] + prior_prob - qSum);
 }
