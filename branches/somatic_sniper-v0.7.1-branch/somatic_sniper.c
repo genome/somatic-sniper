@@ -8,6 +8,8 @@
 #include "khash.h"
 #include "kstring.h"
 #include "somatic_sniper.h"
+#include "prior.h"
+#include "sniper_util.h"
 
 //TODO not sure what these are for yet
 typedef int *indel_list_t;
@@ -25,31 +27,14 @@ KHASH_MAP_INIT_INT64(64, indel_list_t)
 #define HOMO_INDEL2 1
 #define HET_INDEL   2
     
-#define BAM_REF_BASE       0  //The 4bit encoding of a base matching the reference
-#define BAM_N_BASE         15 //The 4bit encoding of the N base               
 
 static int qAddTable[1024]; //This is a predefined table of adds in Phred space. It is filled upon execution
 
 
-/* glf genotype order is: AA/AC/AG/AT/CC/CG/CT/GG/GT/TT, or AMRWCSYGKT in IUPAC */
-static int glfBase[10] = { 1, 3, 5, 9, 2, 6, 10, 4, 12, 8 } ; /* mapping from 10 genotypes to 4 bit base coding */
-static int baseGlf[16] = { -1, 0, 4, 1, 7, 2, 5, -1, 9, 3, 6, -1, 8, -1, -1, -1 } ; /* inverse of glfBase */
-
-
-#define isHom(x) ((x) != BAM_REF_BASE && !((x) & ((x) - 1))) //Test to see if the 4bit encoded nucleotide is Homozygous (a power of two). Got this off the web.
-#define isHet(y) ((y) != BAM_REF_BASE && (y) != BAM_N_BASE && ((y) & ((y) - 1)))    //Test to see if a 4bit encoded nucleotide is Heterozygous.
-
-#define nt4_to_nt2(x) ( isHom(x) ? log2(x): (-1) )
-
 //do phred equivalent of log(x + y) where both x and y are already in log space
 #define qAdd(x,y)  (x - qAddTable[512+y-x])
 
-static int germline_priors[16][10] ;  /* index over reference base, genotype. Stores precalculated prior probabilities for germline assumption */
-static int diploid_transition_transversion[10][10]; //genotype transition/transversion probabilities.
-#define transitionProb  0.66666667
-#define transversionProb 0.16666667
 
-int logAdd(int a, int c);
 
 
 //a big giant ass heng li type struct for storing variables that need to get passed to the callback
@@ -80,126 +65,8 @@ typedef struct {
 //TODO determine what this is actually doing 
 int prob_indel(glf3_t* indel, int prior_prob, int likelihood_flag);
 
-double transition_transversion_calc(int a, int b) {
-    if(abs(a-b) == 2) {
-        return transitionProb;
-    }
-    else {
-        return transversionProb;
-    }
-}
 
-void initialize_diploid_transition_transversion() {
-    int i,j;
-    for(i = 0; i < 10; ++i) {
-        for(j = 0; j < 10; ++j) {
-            //initialize based on the number of changes and phasing etc
-            if(i==j) {
-                diploid_transition_transversion[i][j] = 255;    //no change so no probability of change
-            }
-            else {
-                char a = glfBase[i];
-                char b = glfBase[j];
-                
-                //decompose into alleles, there must be a smarter way to do this
-                int a_alleles[2], b_alleles[2], num_alleles_in_a = 0, num_alleles_in_b = 0;
-                int bit = 0, a_allele_index = 0, b_allele_index = 0;//which bit we are dealing with
-                //expand into an array of values indicating whether or not the bits are set
-                for(bit=0; bit < 4; bit++) {
-                    int a_bit_set = (a>>bit) & 1;
-                    int b_bit_set = (b>>bit) & 1;
-                    if(a_bit_set) {
-                        a_alleles[a_allele_index] = bit;
-                        a_allele_index++;
-                        num_alleles_in_a++;
-                    }
-                    if(b_bit_set) {
-                        b_alleles[b_allele_index] = bit;
-                        b_allele_index++;
-                        num_alleles_in_b++;
-                    }
-                }
 
-                if(num_alleles_in_a == 1) {
-                    if(num_alleles_in_b == 1) {
-                        //both are homozygous, probability is the change squared
-                        double prob = transition_transversion_calc(a_alleles[0],b_alleles[0]);
-                        diploid_transition_transversion[i][j] = logPhred(prob * prob);
-                    }
-                    else {
-                        //a is hom and b is het, the probability is the prob of different alleles * each other
-                        int b_allele;
-                        double prob = 1.0;
-                        for(b_allele = 0; b_allele < 2; b_allele++) {
-                            if(b_alleles[b_allele] != a_alleles[0]) {
-                                prob *= transition_transversion_calc(a_alleles[0],b_alleles[b_allele]);
-                            }
-                        }
-                        diploid_transition_transversion[i][j] = logPhred(prob);
-                    }
-
-                }
-                else {
-                    if(num_alleles_in_b == 1) {
-                        //is b is hom and a is het, the prob is the same as for same situation above 
-                        int a_allele;
-                        double prob = 1.0;
-                        for(a_allele = 0; a_allele < 2; a_allele++) {
-                            if(a_alleles[a_allele] != b_alleles[0]) {
-                                prob *= transition_transversion_calc(b_alleles[0],a_alleles[a_allele]);
-                            }
-                        }
-                        diploid_transition_transversion[i][j] = logPhred(prob);
-
-                    }
-                    else {
-                        //if both are het then it is the product of the combination of those alleles divided by two (number of combinations)
-                        diploid_transition_transversion[i][j] = logPhred( transition_transversion_calc(a_alleles[0],b_alleles[0]) * transition_transversion_calc(a_alleles[1],b_alleles[1]) + transition_transversion_calc(a_alleles[0],b_alleles[1]) * transition_transversion_calc(a_alleles[1],b_alleles[0])) - logPhred(2);    
-                    }
-                }
-            }
-        }
-    }
-}
-
-void print_transition_tranversion_priors() {
-    int i,j;
-    for(i = 0; i < 10; ++i) {
-        char a = bam_nt16_rev_table[glfBase[i]];
-        fprintf(stderr,"\t%c",a);
-    }
-    fprintf(stderr,"\n");
-    for(i = 0; i < 10; ++i) {
-        char a = bam_nt16_rev_table[glfBase[i]];
-        fprintf(stderr,"%c",a);
-        int sum = 255;
-        for(j = 0; j < 10; ++j) {
-           //fprintf(stderr,"\t%i",diploid_transition_transversion[i][j]);
-           fprintf(stderr,"\t%f",expPhred(diploid_transition_transversion[i][j]));
-           sum = logAdd(sum,diploid_transition_transversion[i][j]);
-        }
-        fprintf(stderr,"\tSum: %d\n", sum);
-    }
-}
-
-void print_germline_priors() {
-    int i,j;
-    for(j = 0; j < 10; ++j) {
-        char b = bam_nt16_rev_table[glfBase[j]];
-        fprintf(stderr,"\t%c",b);
-    }
-    fprintf(stderr,"\n");
-    for(i = 0; i < 16; ++i) {
-        char a = bam_nt16_rev_table[i];
-        int sum = 1000;
-        fprintf(stderr,"%c",a);
-        for(j = 0; j < 10; ++j) {
-           fprintf(stderr,"\t%i",germline_priors[i][j]);
-           sum = logAdd(sum, germline_priors[i][j]);
-        }
-        fprintf(stderr,"\tSum: %d\n", sum);
-    }
-}
 
 sniper_maqindel_ret_t *sniper_somaticindelscore(int n, int pos, const sniper_maqindel_opt_t *mi, const bam_pileup1_t *pl, const char *ref, sniper_maqindel_ret_t *tumor_indel);
 
@@ -208,55 +75,6 @@ char **__bam_get_lines(const char *fn, int *_n);
 void bam_init_header_hash(bam_header_t *header);
 int32_t bam_get_tid(const bam_header_t *header, const char *seq_name);
 
-//phred space log add
-int logAdd(int a, int c) {
-    if(a < c) {
-        return (a + logPhred(1.0 + expPhred(c - a) ) );
-    } 
-    else {
-        return (c + logPhred(1.0 + expPhred(a - c) ) );
-    }
-}
-
-//This calculates the posterior probabilities for single nucleotide variant position
-void calculatePosteriors(glf1_t *g, int lkResult[]) {
-    unsigned char refBase = g->ref_base;
-    int qSum = 255;
-    int qMin = 1000;
-    int j;
-
-    //Calculate Posteriors
-    for (j = 0 ; j < 10 ; ++j) { 
-        int x = g->lk[j] + germline_priors[refBase][j];
-        qSum = logAdd(x, qSum) ;
-        if (x < qMin) qMin = x ;
-        lkResult[j] = x ;
-    }
-    //fprintf(stderr,"qSum = %d\nqMin = %d\n",qSum,qMin);
-    //iprintLikelihoods(lkResult);
-    for (j = 0 ; j < 10 ; ++j) {
-        lkResult[j] -= qSum;
-        //lkResult[j] -= qMin;
-        if(lkResult[j] > 255) {
-            lkResult[j] = 255;
-        }
-    }
-
-}
-
-
-int prior_for_genotype(int tumor_genotype, int normal_genotype, int ref) {
-
-    if(tumor_genotype == normal_genotype) {
-        return germline_priors[ref][tumor_genotype];
-    }
-    else {
-        //assuming uniform priors for every possible somatic genotype ie 10x10 combinations - 10 germline = 90 somatic right now
-        //TODO change to transition/transversion
-        return diploid_transition_transversion[normal_genotype][tumor_genotype];
-    }
-
-}
 
 void print_glf(glf1_t *g) {
     fprintf(stderr, "\tmin_lk: %d\n",g->min_lk);
@@ -266,33 +84,6 @@ void print_glf(glf1_t *g) {
         fprintf(stderr, "\t%c: %d\n",bam_nt16_rev_table[glfBase[i]],g->lk[i]);
     }
 
-}
-
-//This generates the germline priors based on the constant THETA. 
-//TODO add more comments on what the actually means
-void initialize_germline_priors (int germline_priors[][10], float prior) {
-    int i, b, ref ;
-
-    for (ref = 0 ; ref < 16 ; ++ref) {
-        for (i = 0 ; i < 10 ; ++i) { 
-            b = glfBase[i];
-            int r = baseGlf[ref];
-            if(r > -1) {
-
-                if (!(b & ~ref))	/* ie b is compatible with ref */
-                    germline_priors[ref][i] = 0;
-                else if (b & ref)	/* ie one allele of b is compatible with ref */
-                    germline_priors[ref][i] = logPhred(prior) + diploid_transition_transversion[r][i];
-                else if (isHom(b))	/* single mutation homozygote */
-                    germline_priors[ref][i] = logPhred(0.5*prior) + diploid_transition_transversion[r][i];
-                else			/* two mutations */
-                    germline_priors[ref][i] = logPhred(prior*prior) + diploid_transition_transversion[r][i];
-            }
-            else {
-                germline_priors[ref][i] = 255;  //make non homozygous reference bases really unlikely...FIXME at some point when we care
-            }
-        }
-    }
 }
 
 
@@ -561,7 +352,7 @@ int main(int argc, char *argv[])
     fprintf(stderr,"\n\n");
 
     //Make sure to initialize these after the transition/transversion as they are interdependent
-    initialize_germline_priors(germline_priors, d->c->het_rate);   //for now use the popeulation het rate 
+    initialize_germline_priors(d->c->het_rate);   //for now use the popeulation het rate 
     print_germline_priors();
     fprintf(stderr,"\n\n");
     

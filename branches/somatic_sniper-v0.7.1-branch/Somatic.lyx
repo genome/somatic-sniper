@@ -574,12 +574,29 @@ While germline priors were outlined above already, these can be made more
 \end_layout
 
 \begin_layout Standard
+It seems that, if we are going to take into account transversion and transitions
+, we need to calculate our prior probabilities in the context of individual
+ bases.
+ Furthermore, the equations underlying germline priors and somatic priors
+ should be very similar such that probabilities of transitions and transversions
+ can feed into both.
+\end_layout
+
+\begin_layout Standard
 For germline mutations the probability 
-\begin_inset Formula $P(G)$
+\begin_inset Formula $P(G_{t},G_{n}|G_{t}=G_{n})$
 \end_inset
 
- can be written as 
-\begin_inset Formula $P(G)=P(A,B)=P(A,B|R)P(R)$
+ can be derived to single bases as follows:
+\begin_inset Formula \begin{eqnarray*}
+P(G_{t},G_{n}|G_{t}=G_{n}) & = & P(G)\\
+ & = & P(G|R)P(R)\\
+ & = & P(G_{A},G_{B}|R_{A},R_{B})P(R_{A},R_{B})\end{eqnarray*}
+
+\end_inset
+
+
+\begin_inset Formula $P(G_{t},G_{n}|G_{t}=G_{n})=P(G)=P(G|R)P(R)=P(G_{A},G_{B}|R_{A},R_{B})P(R_{A},R_{B})$
 \end_inset
 
  and for somatic mutations the probability 

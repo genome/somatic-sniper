@@ -1,10 +1,6 @@
 #ifndef SOMATIC_SNIPER
 #define SOMATIC_SNIPER
 
-/* Functions for converting to and from Phred space */
-#define expPhred(x) (double)exp((double)(-(x))/4.343)
-#define logPhred(x) (int)((x) < 1 ? (0.5-4.343*log(x)) : (-0.5-4.343*log(x)))
-
 /*callback function to be called when the pileup buffer is filled for a position */ 
 typedef int (*bam_sspileup_f)(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t *pl1, const bam_pileup1_t *pl2, void *data, FILE* snp_fh, FILE* indel_fh);
 /* Iterate over positions in a pileup */
