@@ -3,11 +3,12 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "sam.h"
 
 //prior probabilities of transversions and transitions
-static double transitionProb = 0.66666667;
-static double transversionProb = 0.16666667;
+static double transitionProb = 4.0/9.0;//0.66666667;
+static double transversionProb = 1.0/9.0;//0.16666667;
 
 //prior probabilities of germline sites and somatic sites
 static int germline_priors[16][10] ;  /* index over reference base, genotype. Stores precalculated prior probabilities for germline assumption */
@@ -66,6 +67,7 @@ void initialize_germline_priors (float prior) {
 //initializes the somatic priors with a "neutral" mutation model
 void initialize_diploid_transition_transversion() {
     int i,j;
+    fprintf(stderr,"Initializing default somatic probabilities based on transition/transversion probabilities\n");
     for(i = 0; i < 10; ++i) {
         //for now all normal genotypes are equally likely so
         prior_of_normal_genotype_yielding_somatic[i] = logPhred(0.1);   
@@ -149,13 +151,15 @@ void print_transition_tranversion_priors() {
     for(i = 0; i < 10; ++i) {
         char a = bam_nt16_rev_table[glfBase[i]];
         fprintf(stderr,"%c",a);
-        int sum = 255;
+        //int sum = 255;
+        double sum = 0.0;
         for(j = 0; j < 10; ++j) {
            //fprintf(stderr,"\t%i",diploid_transition_transversion[i][j]);
            fprintf(stderr,"\t%f",expPhred(diploid_transition_transversion[i][j]));
-           sum = logAdd(sum,diploid_transition_transversion[i][j]);
+           //sum = logAdd(sum,diploid_transition_transversion[i][j]);
+           sum += expPhred(diploid_transition_transversion[i][j]);
         }
-        fprintf(stderr,"\tSum: %d\n", sum);
+        fprintf(stderr,"\tSum: %f\n", sum);
     }
 }
 
@@ -176,4 +180,37 @@ void print_germline_priors() {
         }
         fprintf(stderr,"\tSum: %d\n", sum);
     }
+}
+
+//loads the prior probabilities from a matrix file
+int load_priors_from_file(FILE *file, double prior) {
+        //check header
+        char header[20];
+        char *expected_header = "\tA\tM\tR\tW\tC\tS\tY\tG\tK\tT";
+        int result = fscanf(file,"%20c ",header);
+        header[20]='\0';    //null terminate the string
+        if(result == 0 || result == EOF || strcmp(expected_header,header) != 0) {
+            fprintf(stderr, "Improperly formatted header line for the somatic probabilities\n");
+            return 0;
+        }
+        //load somatic probabilities
+        int i=0;
+        
+        for(i = 0; i<10; i++) {
+            result = 0;
+            char base;
+            double raw_probabilities[10];
+            result = fscanf(file,"%c\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf ",&base,&raw_probabilities[0],&raw_probabilities[1],&raw_probabilities[2],&raw_probabilities[3],&raw_probabilities[4],&raw_probabilities[5],&raw_probabilities[6],&raw_probabilities[7],&raw_probabilities[8],&raw_probabilities[9]);
+            if(result != 11) {
+                fprintf(stderr, "Improperly formatted probability line for the somatic probabilities\n");
+                return 0;
+            }
+            int j = 0;
+            for(j=0; j < 10; j++) {
+                diploid_transition_transversion[i][j] = logPhred(raw_probabilities[j]);
+            }
+        } 
+        //initalize germline priors'
+        initialize_germline_priors(prior);
+        return 1;
 }

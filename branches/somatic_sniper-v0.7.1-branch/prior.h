@@ -1,6 +1,9 @@
 #ifndef PRIOR_H
 #define PRIOR_H
+#include <stdio.h>
 
+//loads the prior probabilities from a matrix file
+int load_priors_from_file(FILE *file, double prior);
 
 //returns the appropriate prior probability for a given reference base, and tumor and normal genotypes
 int prior_for_genotype(int tumor_genotype, int normal_genotype, int ref);

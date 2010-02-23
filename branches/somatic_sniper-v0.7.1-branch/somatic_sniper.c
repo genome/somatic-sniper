@@ -284,6 +284,7 @@ int main(int argc, char *argv[])
 {
     int c;  //For processing command line options
     char *fn_fa = NULL;    //pointer to the reference sequence filename
+    char *prior_prob = NULL; //pointer to the prior somatic probabilities filename
     
     pu_data2_t *d = (pu_data2_t*)calloc(1, sizeof(pu_data2_t)); //This stores file info and variables related to the calculating of likelihoods 
     
@@ -298,7 +299,7 @@ int main(int argc, char *argv[])
     d->pl3 = NULL;
     d->max_n3 = 0;
     
-    while ((c = getopt(argc, argv, "f:T:N:r:I:G:q:Q:s:")) >= 0) {
+    while ((c = getopt(argc, argv, "f:T:N:r:I:G:q:Q:s:p:")) >= 0) {
         switch (c) {
             case 'f': fn_fa = strdup(optarg); break;    //reference file name.
             case 'T': d->c->theta = atof(optarg); break;    //error correlation correction
@@ -309,6 +310,7 @@ int main(int argc, char *argv[])
             case 'G': d->ido->r_indel = atof(optarg); break;    //probability of a indel between haplotypes
             case 'Q': d->min_somatic_qual = atoi(optarg); break;//minimum somatic quality to report of SNVs         
             case 's': d->somatic_rate = atof(optarg); break;   //probability of observing a somatic point mutuation         
+            case 'p': prior_prob = strdup(optarg); break;   //somatic genotype probability file         
             default: fprintf(stderr, "Unrecognizd option '-%c'.\n", c); return 1;
         }
     }
@@ -326,8 +328,12 @@ int main(int argc, char *argv[])
         fprintf(stderr, "        -G FLOAT  prior of an indel between two haplotypes [%f]\n", d->ido->r_indel);
         fprintf(stderr, "        -I INT    phred prob. of an indel in sequencing/prep [%d]\n", d->ido->q_indel);
         fprintf(stderr, "        -s FLOAT  prior of a somatic point mutation occuring [%f]\n", d->somatic_rate);
+        fprintf(stderr, "        -p FILE   somatic genotype probability file\n");
         fprintf(stderr, "\n");
         free(fn_fa); sniper_maqcns_destroy(d->c); free(d->ido); free(d);
+        if(prior_prob) {
+            free(prior_prob);
+        }
         return 1;
     }
 
@@ -347,12 +353,39 @@ int main(int argc, char *argv[])
     //Prepare to run the caller
     sniper_maqcns_prepare(d->c); //This precalculates some tables.
     qAddTableInit();    //Initialize a precalculated table of phred space additions ie when x and y are log space and you need log(x + y)
-    initialize_diploid_transition_transversion();
+    if(prior_prob) {
+        FILE *somatic_prior_prob = fopen(prior_prob,"r");
+        if(somatic_prior_prob == NULL) {
+            //TODO check errno here
+            fprintf(stderr, "Error opening somatic probability file %s.\n",prior_prob); 
+            //TODO report a more coherent error message taking into account the errno value
+            free(prior_prob);
+            sniper_maqcns_destroy(d->c);
+            free(d->ido); 
+            free(d);
+            return 1;
+        }
+        else {
+            free(prior_prob);
+            if(load_priors_from_file(somatic_prior_prob,d->c->het_rate) == 0) {
+                //there was some sort of error
+                sniper_maqcns_destroy(d->c);
+                free(d->ido); 
+                free(d);
+                fclose(somatic_prior_prob);
+                return 1;
+            }
+        }
+
+    }
+    else {
+        initialize_diploid_transition_transversion();
+        initialize_germline_priors(d->c->het_rate);
+    }
+        
     print_transition_tranversion_priors();
     fprintf(stderr,"\n\n");
 
-    //Make sure to initialize these after the transition/transversion as they are interdependent
-    initialize_germline_priors(d->c->het_rate);   //for now use the popeulation het rate 
     print_germline_priors();
     fprintf(stderr,"\n\n");
     

@@ -595,24 +595,18 @@ P(G_{t},G_{n}|G_{t}=G_{n}) & = & P(G)\\
 
 \end_inset
 
-
-\begin_inset Formula $P(G_{t},G_{n}|G_{t}=G_{n})=P(G)=P(G|R)P(R)=P(G_{A},G_{B}|R_{A},R_{B})P(R_{A},R_{B})$
+and for somatic mutations the probability 
+\begin_inset Formula $P(G_{t}|G_{n},G_{t}\neq G_{n})$
 \end_inset
 
- and for somatic mutations the probability 
-\begin_inset Formula $P(G_{t},G_{n})$
+ can be written as:
+\begin_inset Formula \begin{eqnarray*}
+P(G_{t}|G_{n},G_{t}\neq G_{n}) & = & P(A_{t},B_{t}|A_{n},B_{n},A_{t},B_{t}\neq A_{n},B_{n})\\
+ & =\end{eqnarray*}
+
 \end_inset
 
- can be written 
-\begin_inset Formula $P(G_{t,}G_{n})=\left[P(A_{t}|A_{n})P(B_{t}|B_{n})+P(A_{t}|B_{n})P(B_{t}|A_{n})\right]P(\rho|A_{n},B_{n})$
-\end_inset
 
- if we assume each genotype is only two alleles, assume they are independent,
- and take into account a phasing variable 
-\begin_inset Formula $\rho$
-\end_inset
-
-.
 \end_layout
 
 \begin_layout Section
