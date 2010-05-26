@@ -50,6 +50,26 @@ char **__bam_get_lines(const char *fn, int *_n);
 void bam_init_header_hash(bam_header_t *header);
 int32_t bam_get_tid(const bam_header_t *header, const char *seq_name);
 
+static int isHom[16] = {0,1,1,0,1,0,0,0,1,0,0,0,0,0,0,0} ;
+static int isHet[16] = {0,0,0,1,0,1,1,0,0,1,1,0,1,0,0,0} ;
+static int glfBase[10] = { 1, 3, 5, 9, 2, 6, 10, 4, 12, 8 } ; /* mapping from 10 genotypes to 4 bit base coding */
+void makeSoloPrior (void)
+{
+    int i, b, ref ;
+
+    for (ref = 0 ; ref < 16 ; ++ref)
+        for (i = 0 ; i < 10 ; ++i)
+        { b = glfBase[i] ;
+            if (!(b & ~ref))	/* ie b is compatible with ref */
+                prior[ref][i] = 0 ;
+            else if (b & ref)	/* ie one allele of b is compatible with ref */
+                prior[ref][i] = logPhred(THETA) ;
+            else if (isHom[b])	/* single mutation homozygote */
+                prior[ref][i] = logPhred(0.5*THETA) ;
+            else			/* two mutations */
+                prior[ref][i] = logPhred(THETA*THETA) ;
+        }
+}
 
 void calculatePosteriors(glf1_t *g, int lkResult[]) {
     unsigned char refBase = g->ref_base;
@@ -229,7 +249,8 @@ int main(int argc, char *argv[])
     d->tid = -1; d->mask = BAM_DEF_MASK; d->mapQ = 0;
     d->c = sniper_maqcns_init();
     d->ido = sniper_maqindel_opt_init();
-    while ((c = getopt(argc, argv, "f:T:N:r:I:G:q:Q:")) >= 0) {
+    int use_priors = 1;
+    while ((c = getopt(argc, argv, "f:T:N:r:I:G:q:Q:p")) >= 0) {
         switch (c) {
             case 'f': fn_fa = strdup(optarg); break;
             case 'T': d->c->theta = atof(optarg); break;
@@ -239,6 +260,7 @@ int main(int argc, char *argv[])
             case 'I': d->ido->q_indel = atoi(optarg); break;
             case 'G': d->ido->r_indel = atof(optarg); break;
             case 'Q': d->min_somatic_qual = atoi(optarg); break;         
+            case 'p': use_priors = 0; break;         
             default: fprintf(stderr, "Unrecognizd option '-%c'.\n", c); return 1;
         }
     }
@@ -250,6 +272,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Options: \n");
         fprintf(stderr, "        -q INT    filtering reads with mapping quality less than INT [%d]\n", d->mapQ);
         fprintf(stderr, "        -Q INT    filtering somatic snp output(NOT INDELS!) with somatic quality less than  INT [15]\n");
+        fprintf(stderr, "        -p FLAG   disable priors in the somatic calculation. Increases sensitivity for solid tumors\n");
         fprintf(stderr, "        -T FLOAT  theta in maq consensus calling model (for -c/-g) [%f]\n", d->c->theta);
         fprintf(stderr, "        -N INT    number of haplotypes in the sample (for -c/-g) [%d]\n", d->c->n_hap);
 
@@ -273,6 +296,10 @@ int main(int argc, char *argv[])
     free(fn_fa);
     sniper_maqcns_prepare(d->c);
     fprintf(stderr,"Preparing to snipe some somatics\n");
+    if(use_priors) {
+        fprintf(stderr,"Using prior probabilities\n");
+        makeSoloPrior();
+    }
     bamFile fp1, fp2;
     qAddTableInit();
     fp1 = (strcmp(argv[optind], "-") == 0)? bam_dopen(fileno(stdin), "r") : bam_open(argv[optind], "r");
