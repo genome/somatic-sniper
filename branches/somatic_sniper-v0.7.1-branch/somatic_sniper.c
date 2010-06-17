@@ -49,7 +49,7 @@ typedef struct {
     int tid, len, last_pos;     //info about where in the reference the program is at
     int mask;                   //mask to determine what reads to allow
     int mapQ;                   //minimum mapping quality value TODO Check this is true
-    int min_somatic_qual;   //for limiting snp calls in somatic sniper
+    double min_somatic_qual;   //for limiting snp calls in somatic sniper
     char *ref;              //the reference seqeunce in characters for the current chromosome
     
     //somatic specific
@@ -159,8 +159,7 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
 
     double qPosteriorSum = 10000.0;
     double qSomatic = 10000.0;
-//    double qProbabilityData = 10000.0;
-    double qProbabilityGermline = 10000.0, qProbabilitySomatic = 10000.00;
+    double qProbabilityData = 10000.0;
 
     glf1_t *gTumor =sniper_maqcns_glfgen(n1, pl1, bam_nt16_table[rb], d->c);
     //fprintf(stderr, "Tumor likelihood for %d:\n",pos+1);
@@ -181,23 +180,14 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
             double min_joint_lk = 10000;
             for(tumor = 0; tumor < 10; tumor++) {
                 for(normal = 0; normal < 10; normal++) {
-                    lkSomatic[tumor][normal] = (gTumor->lk[tumor] + gTumor->min_lk) + (gNormal->lk[normal] + gNormal->min_lk) + prior_for_genotype(tumor,normal,rb4);//applying this higher up + somatic_prior_for_genotype(tumor,normal);
+                    lkSomatic[tumor][normal] = (gTumor->lk[tumor] + gTumor->min_lk) + (gNormal->lk[normal] + gNormal->min_lk) + prior_for_genotype(tumor,normal,rb4) + somatic_prior_for_genotype(tumor,normal);
                     /*                    if(lkSomatic[tumor][normal] > 255) {
                         lkSomatic[tumor][normal] = 255;
                     }
                     */
-                    //qProbabilityData = logAdd(lkSomatic[tumor][normal],qProbabilityData);
-                    if(normal==tumor) {
-                        //germline
-                        qProbabilityGermline = logAdd(lkSomatic[tumor][normal],qProbabilityGermline);
-                    }
-                    else {
-                        //somatic
-                        qProbabilitySomatic = logAdd(lkSomatic[tumor][normal],qProbabilitySomatic);
-                    }
-                    //TODO probably don't really want this
-                    if(lkSomatic[tumor][normal] + somatic_prior_for_genotype(tumor,normal) < min_joint_lk) {
-                        min_joint_lk = lkSomatic[tumor][normal] + somatic_prior_for_genotype(tumor,normal);
+                    qProbabilityData = logAdd(lkSomatic[tumor][normal],qProbabilityData);
+                    if(lkSomatic[tumor][normal] < min_joint_lk) {
+                        min_joint_lk = lkSomatic[tumor][normal];
                         min_lk_normal_genotype = normal;
                         min_lk_tumor_genotype = tumor;
                     }
@@ -205,9 +195,7 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
             }
             for(tumor = 0; tumor < 10; tumor++) {
                 for(normal = 0; normal < 10; normal++) {
-//                    lkSomatic[tumor][normal] -= qProbabilityData;
-                    lkSomatic[tumor][normal] += somatic_prior_for_genotype(tumor,normal);
-                    lkSomatic[tumor][normal] -= logAdd(qProbabilityGermline + somatic_prior_for_genotype(normal,normal),qProbabilitySomatic + somatic_prior_for_genotype(1,3));
+                    lkSomatic[tumor][normal] -= qProbabilityData;
                     //cap low likelihoods
                     //if(lkSomatic[tumor][normal] > 255) {
                     //    lkSomatic[tumor][normal] = 255;
@@ -220,9 +208,6 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
                 }
             }
 
-//            qSomatic = qProbabilityGermline + somatic_prior_for_genotype(1,1) - logAdd(qProbabilityGermline + somatic_prior_for_genotype(1,1),qProbabilitySomatic + somatic_prior_for_genotype(1,3));
-
-            // int result = logAdd(0,-qPosteriorSum);
             if(d->min_somatic_qual <= qSomatic) {  
                 fprintf(snp_fh, "%s\t%d\t%c\t%c\t%c\t%f\t%f\t%d\t%d\n",d->tumor_header->target_name[tid], pos + 1 , rb, bam_nt16_rev_table[glfBase[min_lk_tumor_genotype]], bam_nt16_rev_table[glfBase[min_lk_normal_genotype]], qSomatic, qPosteriorSum, n1, n2);
                 //original caller compatible format
@@ -247,7 +232,7 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
             int hetindelnormal = prob_indel(normal_g3, prior3, HET_INDEL);
             int hom2indelnormal = prob_indel(normal_g3, prior2, HOMO_INDEL2);
             int hom1indelnormal = prob_indel(normal_g3, prior1, HOMO_INDEL1);
-            qPosteriorSum = 255;
+            int qPosteriorSum = 255;
             int het_sum = (hetindeltumor+hetindelnormal) > 255 ? 255 : hetindeltumor+hetindelnormal; 
             int hom1_sum = (hom1indeltumor+hom1indelnormal) > 255 ? 255 : hom1indeltumor+hom1indelnormal;  
             int hom2_sum = (hom2indeltumor+hom2indelnormal) > 255 ? 255 : hom2indeltumor+hom2indelnormal;  
@@ -297,7 +282,7 @@ int main(int argc, char *argv[])
     pu_data2_t *d = (pu_data2_t*)calloc(1, sizeof(pu_data2_t)); //This stores file info and variables related to the calculating of likelihoods 
     
     //initialize some basic filter variables
-    d->min_somatic_qual = 0;  //by default there is no minimum somatic quality
+    d->min_somatic_qual = 0.0;  //by default there is no minimum somatic quality
     d->tid = -1; //stores the current chromosome
     d->mask = BAM_DEF_MASK; 
     d->mapQ = 0;
@@ -316,7 +301,7 @@ int main(int argc, char *argv[])
             case 'q': d->mapQ = atoi(optarg); break;        //minimum mapping quality
             case 'I': d->ido->q_indel = atoi(optarg); break;    //probability of indel in prep
             case 'G': d->ido->r_indel = atof(optarg); break;    //probability of a indel between haplotypes
-            case 'Q': d->min_somatic_qual = atoi(optarg); break;//minimum somatic quality to report of SNVs         
+            case 'Q': d->min_somatic_qual = atof(optarg); break;//minimum somatic quality to report of SNVs         
             case 's': d->somatic_rate = atof(optarg); break;   //probability of observing a somatic point mutuation         
             case 'p': prior_prob = strdup(optarg); break;   //somatic genotype probability file         
             default: fprintf(stderr, "Unrecognizd option '-%c'.\n", c); return 1;

@@ -347,11 +347,11 @@ void print_germline_priors() {
     fprintf(stderr,"\n");
     for(i = 0; i < 16; ++i) {
         char a = bam_nt16_rev_table[i];
-        double sum = 1000.0;
+        double sum = 0.0;
         fprintf(stderr,"%c",a);
         for(j = 0; j < 10; ++j) {
-           fprintf(stderr,"\t%f",germline_priors[i][j]);
-           sum = logAdd(sum, germline_priors[i][j]);
+           fprintf(stderr,"\t%f",expPhred(germline_priors[i][j]));
+           sum += expPhred(germline_priors[i][j]);
         }
         fprintf(stderr,"\tSum: %f\n", sum);
     }
