@@ -560,53 +560,102 @@ Although we will need to consider LOH explicitly and consider LOH in the
 Choosing appropriate priors
 \end_layout
 
+\begin_layout Subsubsection
+Prior probability of a joint genotype event(s)
+\end_layout
+
 \begin_layout Standard
-While germline priors were outlined above already, these can be made more
- sophisticated by accounting for the known bias towards transition mutations
- in the germline.
- This is the approach taken by SOAPsnp (Li et al 2009) and although they
- do not test whether or not these priors make a difference, they seem like
- a smart idea.
+For 
+\begin_inset Formula $P(G_{S})$
+\end_inset
+
+ the prior probabilities for a somatic mutation rate 
+\begin_inset Formula $\mu$
+\end_inset
+
+ should break down as follows:
+\begin_inset Formula \begin{eqnarray*}
+P(G_{t}=G_{n}) & \approx & 1\\
+P(G_{t}\doteq G_{n}) & = & \mu\\
+P(G_{t}\neq G_{n}) & = & \mu^{2}.\end{eqnarray*}
+
+\end_inset
+
+In English, the prior probability of a single somatic mutation (one change)
+ is the mutation rate and the prior probability for two changes is the square
+ of that rate.
+ One potential shortcoming of this solution is that LOH type somatic sites
+ will be grossly discounted.
+ In testing, it also seems that this will discount somatic sites that are
+ deriving a good deal of somatic probability from the possibility they are
+ homozygous.
+ A good default somatic rate may be around 
+\begin_inset Formula $10^{-6}$
+\end_inset
+
+, but it will likely need to be higher in order to maintain sensitivity.
+ Testing will need to be done.
+\end_layout
+
+\begin_layout Subsubsection
+Probability of germline genotypes
+\end_layout
+
+\begin_layout Standard
+While germline priors 
+\begin_inset Formula $P(G_{t,}G_{n}|G_{t}=G_{n})$
+\end_inset
+
+ were outlined above already, these can be made more sophisticated by accounting
+ for the known bias towards transition mutations in the germline.
+ This is the approach taken by SOAPsnp (Li et al 2009) and should be more
+ accurate.
+ For the germline, the priors are straightforward and will be implemented
+ identically as in SOAPsnp.
+ As a convenience, non-homozygous reference bases will be set to be maximally
+ unlikely and essentially forbid them from being called.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+Probability of somatic genotypes
+\end_layout
+
+\begin_layout Standard
+The actual impact of just this change is unknown at this point.
  If you accept the fact that the underlying chemistry of the bases makes
  this type of ratio likely (and I will need to provide evidence of such)
- then these seem like smart prior probabilities when the true mutation spectrum
+ then these seem like good prior probabilities when the true mutation spectrum
  is unknown.
+ Recent studies on somatic mutations also suggest that this may be a good
+ default assumption (citations).
+ Furthermore, our validation data may help confirm the accuracy of this
+ assumption on our data.
 \end_layout
 
 \begin_layout Standard
-It seems that, if we are going to take into account transversion and transitions
-, we need to calculate our prior probabilities in the context of individual
- bases.
- Furthermore, the equations underlying germline priors and somatic priors
- should be very similar such that probabilities of transitions and transversions
- can feed into both.
-\end_layout
-
-\begin_layout Standard
-For germline mutations the probability 
-\begin_inset Formula $P(G_{t},G_{n}|G_{t}=G_{n})$
+For somatic mutations, the situation is different as heterozygous normal
+ genotypes are expected and determining the prior probabilities of those
+ is slightly more complicated.
+ We want to have prior probablilities for every possible combination of
+ tumor and normal genotypes.
+ Uniform priors is not a good idea.
+ One option would be to take the knowledge that transitions are 4 times
+ more likely than transitions and then solve for each genotype combination.
+ This should yield different ratios for homozygous and heterozygous normal
+ genotypes.
+ I have solved these equations for the two possibilities and for a homozygous
+ normal genotype then the probability of transversion 
+\begin_inset Formula $Tv=\nicefrac{1}{9}$
 \end_inset
 
- can be derived to single bases as follows:
-\begin_inset Formula \begin{eqnarray*}
-P(G_{t},G_{n}|G_{t}=G_{n}) & = & P(G)\\
- & = & P(G|R)P(R)\\
- & = & P(G_{A},G_{B}|R_{A},R_{B})P(R_{A},R_{B})\end{eqnarray*}
-
+and for heterozygous normal genotypes: 
+\begin_inset Formula $Tv=\frac{-12+\sqrt{144+96}}{48}\approx0.07275$
 \end_inset
 
-and for somatic mutations the probability 
-\begin_inset Formula $P(G_{t}|G_{n},G_{t}\neq G_{n})$
-\end_inset
-
- can be written as:
-\begin_inset Formula \begin{eqnarray*}
-P(G_{t}|G_{n},G_{t}\neq G_{n}) & = & P(A_{t},B_{t}|A_{n},B_{n},A_{t},B_{t}\neq A_{n},B_{n})\\
- & =\end{eqnarray*}
-
-\end_inset
-
-
+.
+ I may place the solutions in this document at a later date for easier verificat
+ion.
 \end_layout
 
 \begin_layout Section

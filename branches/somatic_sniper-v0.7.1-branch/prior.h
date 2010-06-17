@@ -15,6 +15,12 @@ void initialize_germline_priors (float prior);
 //This generates the somatic priors based on transition/transversion probabilities    
 void initialize_diploid_transition_transversion();
 
+//This generates the somatic priors based on transition/transversion probabilities    
+void initialize_somatic_priors(double prior);
+
+int somatic_prior_for_genotype(int tumor_genotype, int normal_genotype);
+
+
 //Print out the somatic priors
 void print_transition_tranversion_priors();
 void print_germline_priors();

@@ -179,15 +179,8 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
             int min_lk_tumor_genotype = -1, min_lk_normal_genotype = -1, min_joint_lk = 1000;
             for(tumor = 0; tumor < 10; tumor++) {
                 for(normal = 0; normal < 10; normal++) {
-                    if(tumor==normal) {
-                        //then they are germline and the posterior probability is the likelihood generated from all the data 
-                        //lkSomatic[tumor][normal] = (gAll->lk[tumor] + gAll->min_lk) + prior_for_genotype(tumor,normal,rb4) + logPhred(1 - d->somatic_rate); 
-                        lkSomatic[tumor][normal] = (gTumor->lk[tumor] + gTumor->min_lk) + (gNormal->lk[normal] + gNormal->min_lk) + prior_for_genotype(tumor,normal,rb4) + logPhred(1 - d->somatic_rate);
-                    }
-                    else {
-                        lkSomatic[tumor][normal] = (gTumor->lk[tumor] + gTumor->min_lk) + (gNormal->lk[normal] + gNormal->min_lk) + prior_for_genotype(tumor,normal,rb4) + logPhred(d->somatic_rate);
-                    }
-/*                    if(lkSomatic[tumor][normal] > 255) {
+                    lkSomatic[tumor][normal] = (gTumor->lk[tumor] + gTumor->min_lk) + (gNormal->lk[normal] + gNormal->min_lk) + prior_for_genotype(tumor,normal,rb4) + somatic_prior_for_genotype(tumor,normal);
+                    /*                    if(lkSomatic[tumor][normal] > 255) {
                         lkSomatic[tumor][normal] = 255;
                     }
                     */
@@ -203,9 +196,9 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
                 for(normal = 0; normal < 10; normal++) {
                     lkSomatic[tumor][normal] -= qProbabilityData;
                     //cap low likelihoods
-                    if(lkSomatic[tumor][normal] > 255) {
-                        lkSomatic[tumor][normal] = 255;
-                    }   
+                    //if(lkSomatic[tumor][normal] > 255) {
+                    //    lkSomatic[tumor][normal] = 255;
+                    //}   
                     if(tumor != min_lk_tumor_genotype && normal != min_lk_normal_genotype)
                         qPosteriorSum = logAdd(lkSomatic[tumor][normal],qPosteriorSum);
                     if(tumor == normal) {
@@ -381,6 +374,7 @@ int main(int argc, char *argv[])
     else {
         initialize_diploid_transition_transversion();
         initialize_germline_priors(d->c->het_rate);
+        initialize_somatic_priors(d->somatic_rate);
     }
         
     print_transition_tranversion_priors();
