@@ -159,7 +159,8 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
 
     double qPosteriorSum = 10000.0;
     double qSomatic = 10000.0;
-    double qProbabilityData = 10000.0;
+//    double qProbabilityData = 10000.0;
+    double qProbabilityGermline = 10000.0, qProbabilitySomatic = 10000.00;
 
     glf1_t *gTumor =sniper_maqcns_glfgen(n1, pl1, bam_nt16_table[rb], d->c);
     //fprintf(stderr, "Tumor likelihood for %d:\n",pos+1);
@@ -180,14 +181,23 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
             double min_joint_lk = 10000;
             for(tumor = 0; tumor < 10; tumor++) {
                 for(normal = 0; normal < 10; normal++) {
-                    lkSomatic[tumor][normal] = (gTumor->lk[tumor] + gTumor->min_lk) + (gNormal->lk[normal] + gNormal->min_lk) + prior_for_genotype(tumor,normal,rb4) + somatic_prior_for_genotype(tumor,normal);
+                    lkSomatic[tumor][normal] = (gTumor->lk[tumor] + gTumor->min_lk) + (gNormal->lk[normal] + gNormal->min_lk) + prior_for_genotype(tumor,normal,rb4);//applying this higher up + somatic_prior_for_genotype(tumor,normal);
                     /*                    if(lkSomatic[tumor][normal] > 255) {
                         lkSomatic[tumor][normal] = 255;
                     }
                     */
-                    qProbabilityData = logAdd(lkSomatic[tumor][normal],qProbabilityData);
-                    if(lkSomatic[tumor][normal] < min_joint_lk) {
-                        min_joint_lk = lkSomatic[tumor][normal];
+                    //qProbabilityData = logAdd(lkSomatic[tumor][normal],qProbabilityData);
+                    if(normal==tumor) {
+                        //germline
+                        qProbabilityGermline = logAdd(lkSomatic[tumor][normal],qProbabilityGermline);
+                    }
+                    else {
+                        //somatic
+                        qProbabilitySomatic = logAdd(lkSomatic[tumor][normal],qProbabilitySomatic);
+                    }
+                    //TODO probably don't really want this
+                    if(lkSomatic[tumor][normal] + somatic_prior_for_genotype(tumor,normal) < min_joint_lk) {
+                        min_joint_lk = lkSomatic[tumor][normal] + somatic_prior_for_genotype(tumor,normal);
                         min_lk_normal_genotype = normal;
                         min_lk_tumor_genotype = tumor;
                     }
@@ -195,7 +205,9 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
             }
             for(tumor = 0; tumor < 10; tumor++) {
                 for(normal = 0; normal < 10; normal++) {
-                    lkSomatic[tumor][normal] -= qProbabilityData;
+//                    lkSomatic[tumor][normal] -= qProbabilityData;
+                    lkSomatic[tumor][normal] += somatic_prior_for_genotype(tumor,normal);
+                    lkSomatic[tumor][normal] -= logAdd(qProbabilityGermline + somatic_prior_for_genotype(normal,normal),qProbabilitySomatic + somatic_prior_for_genotype(1,3));
                     //cap low likelihoods
                     //if(lkSomatic[tumor][normal] > 255) {
                     //    lkSomatic[tumor][normal] = 255;
@@ -207,6 +219,8 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
                     }
                 }
             }
+
+//            qSomatic = qProbabilityGermline + somatic_prior_for_genotype(1,1) - logAdd(qProbabilityGermline + somatic_prior_for_genotype(1,1),qProbabilitySomatic + somatic_prior_for_genotype(1,3));
 
             // int result = logAdd(0,-qPosteriorSum);
             if(d->min_somatic_qual <= qSomatic) {  
