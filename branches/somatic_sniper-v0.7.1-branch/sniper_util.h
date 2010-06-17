@@ -17,11 +17,11 @@ static int baseGlf[16] = { -1, 0, 4, 1, 7, 2, 5, -1, 9, 3, 6, -1, 8, -1, -1, -1 
 
 /* Functions for converting to and from Phred space */
 #define expPhred(x) (double)exp((double)(-(x))/4.343)
-#define logPhred(x) (int)((x) < 1 ? (0.5-4.343*log(x)) : (-0.5-4.343*log(x)))
-//#define logPhred(x) (double)(-4.343*log(x))
+//#define logPhred(x) (int)((x) < 1 ? (0.5-4.343*log(x)) : (-0.5-4.343*log(x)))
+#define logPhred(x) (double)(-4.343*log(x))
 
 //some math functions
-int logAdd(int a, int c);
-int logSubtract(int a, int c);
+double logAdd(double a, double c);
+double logSubtract(double a, double c);
 
 #endif

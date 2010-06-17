@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 //phred space log add
-int logAdd(int a, int c) {
+double logAdd(double a, double c) {
     if(a < c) {
         return (a + logPhred(1.0 + expPhred(c - a) ) );
     } 
@@ -12,7 +12,7 @@ int logAdd(int a, int c) {
     }
 }
 
-int logSubtract(int a, int c) {
+double logSubtract(double a, double c) {
     if(a < c) {
         return (a + logPhred(1.0 - expPhred(c - a) ) );
     } 

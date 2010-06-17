@@ -155,11 +155,11 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
     int rb = (d->ref && (int)pos < d->len)? d->ref[pos] : 'N';
     int rb4 = bam_nt16_table[rb];
 
-    int lkSomatic[10][10];
+    double lkSomatic[10][10];
 
-    int qPosteriorSum = 255;
-    int qSomatic = 255;
-    int qProbabilityData = 255;
+    double qPosteriorSum = 10000.0;
+    double qSomatic = 10000.0;
+    double qProbabilityData = 10000.0;
 
     glf1_t *gTumor =sniper_maqcns_glfgen(n1, pl1, bam_nt16_table[rb], d->c);
     //fprintf(stderr, "Tumor likelihood for %d:\n",pos+1);
@@ -176,7 +176,8 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
     if (rb != 'N' && gTumor->depth > 0 && gNormal->depth > 0) {
         //calculate posteriors
             int tumor, normal;
-            int min_lk_tumor_genotype = -1, min_lk_normal_genotype = -1, min_joint_lk = 1000;
+            int min_lk_tumor_genotype = -1, min_lk_normal_genotype = -1;
+            double min_joint_lk = 10000;
             for(tumor = 0; tumor < 10; tumor++) {
                 for(normal = 0; normal < 10; normal++) {
                     lkSomatic[tumor][normal] = (gTumor->lk[tumor] + gTumor->min_lk) + (gNormal->lk[normal] + gNormal->min_lk) + prior_for_genotype(tumor,normal,rb4) + somatic_prior_for_genotype(tumor,normal);
@@ -184,7 +185,7 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
                         lkSomatic[tumor][normal] = 255;
                     }
                     */
-                    qProbabilityData = logAdd(lkSomatic[tumor][normal],qProbabilityData );
+                    qProbabilityData = logAdd(lkSomatic[tumor][normal],qProbabilityData);
                     if(lkSomatic[tumor][normal] < min_joint_lk) {
                         min_joint_lk = lkSomatic[tumor][normal];
                         min_lk_normal_genotype = normal;
@@ -209,7 +210,7 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
 
             // int result = logAdd(0,-qPosteriorSum);
             if(d->min_somatic_qual <= qSomatic) {  
-                fprintf(snp_fh, "%s\t%d\t%c\t%c\t%c\t%d\t%d\t%d\t%d\n",d->tumor_header->target_name[tid], pos + 1 , rb, bam_nt16_rev_table[glfBase[min_lk_tumor_genotype]], bam_nt16_rev_table[glfBase[min_lk_normal_genotype]], qSomatic, qPosteriorSum, n1, n2);
+                fprintf(snp_fh, "%s\t%d\t%c\t%c\t%c\t%f\t%f\t%d\t%d\n",d->tumor_header->target_name[tid], pos + 1 , rb, bam_nt16_rev_table[glfBase[min_lk_tumor_genotype]], bam_nt16_rev_table[glfBase[min_lk_normal_genotype]], qSomatic, qPosteriorSum, n1, n2);
                 //original caller compatible format
                 //fprintf(snp_fh, "%s\t%d\t%c\t%c\t%d\t%d\t%d\t%d\n",d->tumor_header->target_name[tid], pos + 1 , rb, bam_nt16_rev_table[glfBase[min_lk_tumor_genotype]], qSomatic, qPosteriorSum, n1, n2);
             }

@@ -6,7 +6,7 @@
 int load_priors_from_file(FILE *file, double prior);
 
 //returns the appropriate prior probability for a given reference base, and tumor and normal genotypes
-int prior_for_genotype(int tumor_genotype, int normal_genotype, int ref);
+double prior_for_genotype(int tumor_genotype, int normal_genotype, int ref);
 
 //This generates the germline priors based on the prior probability of a het mutation. 
 //TODO add more comments on what the actually means
@@ -18,7 +18,7 @@ void initialize_diploid_transition_transversion();
 //This generates the somatic priors based on transition/transversion probabilities    
 void initialize_somatic_priors(double prior);
 
-int somatic_prior_for_genotype(int tumor_genotype, int normal_genotype);
+double somatic_prior_for_genotype(int tumor_genotype, int normal_genotype);
 
 
 //Print out the somatic priors

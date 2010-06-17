@@ -20,10 +20,10 @@ const static double germtransversionProb = 1.0/6.0;
 const static double germtransitionProb = 4.0*1.0/6.0;
 
 //prior probabilities of germline sites and somatic sites
-static int germline_priors[16][10] ;  /* index over reference base, genotype. Stores precalculated prior probabilities for germline assumption */
-static int diploid_transition_transversion[10][10]; //genotype transition/transversion probabilities.
-static int prior_of_normal_genotype_yielding_somatic[10];
-static int somatic_mutation_priors[3];  //store precalculated prior probability of somatic events
+static double germline_priors[16][10] ;  /* index over reference base, genotype. Stores precalculated prior probabilities for germline assumption */
+static double diploid_transition_transversion[10][10]; //genotype transition/transversion probabilities.
+static double prior_of_normal_genotype_yielding_somatic[10];
+static double somatic_mutation_priors[3];  //store precalculated prior probability of somatic events
 
 //this calculates whether the 2bit single base encodings are transitions or transversions and returns the appropriate probabilities
 double transition_transversion_calc(int a, int b, float transitionProb, float transversionProb) {
@@ -51,7 +51,7 @@ int first_allele(int genotype) {
 //Basically should be a little less than 1 for germline
 //the somatic mutation rate for single changes
 //and the somatic mutation rate squared for double changes
-int somatic_prior_for_genotype(int tumor_genotype, int normal_genotype) {
+double somatic_prior_for_genotype(int tumor_genotype, int normal_genotype) {
     if(tumor_genotype == normal_genotype) {
         //0 somatic changes
         return somatic_mutation_priors[0];
@@ -72,7 +72,7 @@ void initialize_somatic_priors(double prior) {
     somatic_mutation_priors[0] = logPhred(1 - prior - prior*prior); //hopefully no underflow. I really need to start checking that.
 }
 
-int prior_for_genotype(int tumor_genotype, int normal_genotype, int ref) {
+double prior_for_genotype(int tumor_genotype, int normal_genotype, int ref) {
 
     if(tumor_genotype == normal_genotype) {
         return germline_priors[ref][tumor_genotype];
@@ -126,7 +126,7 @@ void initialize_diploid_transition_transversion() {
         int total_probability = 10000;  //scaling variable to make sure these end up adding up to one
         double transitionProb = 0.0;
         double transversionProb = 0.0;
-        if(isHom(i)) {
+        if(isHom(glfBase[i])) {
             transversionProb = somaticHomotransversionProb;
             transitionProb = somaticHomotransitionProb;
         }
@@ -171,7 +171,7 @@ void initialize_diploid_transition_transversion() {
                     else {
                         //a is hom and b is het, the probability is the prob of different alleles * each other
                         int b_allele;
-                        int prob = 0;
+                        double prob = 0.0;
                         for(b_allele = 0; b_allele < 2; b_allele++) {
                             if(b_alleles[b_allele] != a_alleles[0]) {
                                 prob += logPhred(transition_transversion_calc(a_alleles[0],b_alleles[b_allele],transitionProb,transversionProb));
@@ -185,7 +185,7 @@ void initialize_diploid_transition_transversion() {
                     if(num_alleles_in_b == 1) {
                         //is b is hom and a is het, the prob is the same as for same situation above 
                         int a_allele;
-                        int prob = 0;
+                        double prob = 0.0;
                         for(a_allele = 0; a_allele < 2; a_allele++) {
                             if(a_alleles[a_allele] != b_alleles[0]) {
                                 prob += logPhred(transition_transversion_calc(b_alleles[0],a_alleles[a_allele],transitionProb,transversionProb));
@@ -326,12 +326,13 @@ void print_transition_tranversion_priors() {
     for(i = 0; i < 10; ++i) {
         char a = bam_nt16_rev_table[glfBase[i]];
         fprintf(stderr,"%c",a);
-        double sum = 0;
+        double sum = 0.0;
         for(j = 0; j < 10; ++j) {
-           fprintf(stderr,"\t%i",diploid_transition_transversion[i][j]);
+           fprintf(stderr,"\t%f",expPhred(diploid_transition_transversion[i][j]));
            //fprintf(stderr,"\t%f",expPhred(diploid_transition_transversion[i][j]));
-           sum = logAdd(sum,diploid_transition_transversion[i][j]);
-           //sum += expPhred(diploid_transition_transversion[i][j]);
+           if(i!=j)
+           //sum = logAdd(sum,diploid_transition_transversion[i][j]);
+           sum += expPhred(diploid_transition_transversion[i][j]);
         }
         fprintf(stderr,"\tSum: %f\n", sum);
     }
@@ -346,13 +347,13 @@ void print_germline_priors() {
     fprintf(stderr,"\n");
     for(i = 0; i < 16; ++i) {
         char a = bam_nt16_rev_table[i];
-        int sum = 1000;
+        double sum = 1000.0;
         fprintf(stderr,"%c",a);
         for(j = 0; j < 10; ++j) {
-           fprintf(stderr,"\t%i",germline_priors[i][j]);
+           fprintf(stderr,"\t%f",germline_priors[i][j]);
            sum = logAdd(sum, germline_priors[i][j]);
         }
-        fprintf(stderr,"\tSum: %d\n", sum);
+        fprintf(stderr,"\tSum: %f\n", sum);
     }
 }
 
