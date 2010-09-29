@@ -1,0 +1,218 @@
+#LyX 1.5.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 276
+\begin_document
+\begin_header
+\textclass article
+\language english
+\inputencoding auto
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\paperfontsize default
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\cite_engine basic
+\use_bibtopic false
+\paperorientation portrait
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\defskip medskip
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\author "" 
+\author "" 
+\end_header
+
+\begin_body
+
+\begin_layout Title
+bam-somaticsniper User Manual
+\end_layout
+
+\begin_layout Author
+David E.
+ Larson and Christopher C.
+ Harris
+\end_layout
+
+\begin_layout Date
+September 29, 2010
+\end_layout
+
+\begin_layout Standard
+The purpose of this program is to identify single nucleotide positions that
+ are different between tumor and normal.
+ It takes a tumor bam and a normal bam and compares the two to determine
+ the differences.
+ It outputs a file in a format very similar to Samtools consensus format.
+ It uses the genotype likelihood model of MAQ (as implemented in Samtools)
+ and then calculates the probability that the tumor and normal genotypes
+ are different.
+ This probability is reported as a somatic score.
+ The somatic score is the Phred-scaled probability (between 
+\begin_inset Formula $0$
+\end_inset
+
+ to 
+\begin_inset Formula $255$
+\end_inset
+
+) that the Tumor and Normal genotypes are not different where 
+\begin_inset Formula $0$
+\end_inset
+
+ means there is no probability that the genotypes are different and 
+\begin_inset Formula $255$
+\end_inset
+
+ means there is a probability of  that the genotypes are different between
+ tumor and normal.
+ This is consistent with how the SAM format reports such probabilities.
+\end_layout
+
+\begin_layout Section*
+Usage
+\end_layout
+
+\begin_layout Standard
+bam-somaticsniper [options] -f <ref.fasta> <tumor.bam> <normal.bam> <snv_output_fil
+e>
+\end_layout
+
+\begin_layout Subsubsection*
+Required Option: 
+\end_layout
+
+\begin_layout Description
+-f FILE 
+\emph on
+REQUIRED
+\emph default
+ reference sequence in the FASTA format
+\end_layout
+
+\begin_layout Subsubsection*
+Options: 
+\end_layout
+
+\begin_layout Description
+-q INT filtering reads with mapping quality less than INT [0] 
+\end_layout
+
+\begin_layout Description
+-Q INT filtering somatic snv output with somatic quality less than INT [15]
+ 
+\end_layout
+
+\begin_layout Description
+-p FLAG disable priors in the somatic calculation.
+ Increases sensitivity for solid tumors 
+\end_layout
+
+\begin_layout Description
+-T FLOAT theta in maq consensus calling model (for -c/-g) [0.850000] 
+\end_layout
+
+\begin_layout Description
+-N INT number of haplotypes in the sample (for -c/-g) [2] 
+\end_layout
+
+\begin_layout Description
+-r FLOAT prior of a difference between two haplotypes (for -c/-g) [0.001000]
+ 
+\end_layout
+
+\begin_layout Section*
+Notes on running bam-somaticsniper
+\end_layout
+
+\begin_layout Standard
+Minimally, you must provide the program a reference fasta (passed with the
+ -f option) a tumor bam, a normal bam, and the filename of the resulting
+ output file.
+ We recommend filtering out reads with a mapping quality of 0 (ie use -q
+ 1) as they are typically randomly placed in the genome.
+ We have also found that few variants with a somatic score less than 15
+ validate, but you may decrease the minimum score or increase it to a higher
+ threshold (eg -Q 40).
+ Disabling priors is not recommended, but may increase sensitivity at the
+ cost of a decrease in specificity.
+\end_layout
+
+\begin_layout Section*
+File Format
+\end_layout
+
+\begin_layout Standard
+The file output by somatic sniper consists of line for all sites whose consensus
+ differs from the reference base.
+ Each line contains the following tab-separated values:
+\end_layout
+
+\begin_layout Enumerate
+Chromosome
+\end_layout
+
+\begin_layout Enumerate
+Position
+\end_layout
+
+\begin_layout Enumerate
+Reference base
+\end_layout
+
+\begin_layout Enumerate
+IUB genotype of tumor
+\end_layout
+
+\begin_layout Enumerate
+Somatic Score
+\end_layout
+
+\begin_layout Enumerate
+Tumor Consensus quality 
+\end_layout
+
+\begin_layout Enumerate
+Tumor SNV quality
+\end_layout
+
+\begin_layout Enumerate
+Tumor RMS mapping quality
+\end_layout
+
+\begin_layout Enumerate
+Depth in tumor (# of reads crossing the position)
+\end_layout
+
+\begin_layout Enumerate
+Depth in normal (# of reads crossing the position)
+\end_layout
+
+\begin_layout Standard
+Note that the IUB Genotype, Consensus Quality and SNV Quality Fields were
+ identical to what samtools pileup -c outputs on the tumor data circa Samtools
+ version 0.1.2-20.
+ They are not composite values based on tumor and normal data.
+ 
+\end_layout
+
+\begin_layout Standard
+
+\end_layout
+
+\end_body
+\end_document
