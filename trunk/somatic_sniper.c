@@ -133,7 +133,7 @@ glf3_t *sniper_maqindel2glf(sniper_maqindel_ret_t *r, int n) {
 static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t *pl1, const bam_pileup1_t *pl2, void *data, FILE *snp_fh, FILE *indel_fh) {
     //hacked copy from function gl3_func behavior to get a g with 10 probabilities to do somatic probability calculation    
     pu_data2_t *d = (pu_data2_t*)data;
-    sniper_maqindel_ret_t *r = 0;
+    //sniper_maqindel_ret_t *r = 0;
     if (d->fai && (int)tid != d->tid) {
         free(d->ref);
         d->ref = fai_fetch(d->fai, d->h1->target_name[tid], &d->len);
@@ -178,7 +178,7 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
             if(d->min_somatic_qual <= qPosteriorSum) {  
                 fprintf(snp_fh, "%s\t%d\t%c\t%c\t%d\t%d\t%d\t%d\t%d\t%d\n",d->h1->target_name[tid], pos + 1 , rb, bam_nt16_rev_table[x>>28], qPosteriorSum, x>>8&0xff, ref_q, x>>16&0xff, n1, n2);
             }
-        }    
+        }/*    
         r = sniper_maqindel(n1, pos, d->ido, pl1, d->ref, 0,0, d->h1);
         if (r) {
             sniper_maqindel_ret_t *q=0;
@@ -229,7 +229,7 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
             sniper_maqindel_ret_destroy(r);
             sniper_maqindel_ret_destroy(q);
 
-        }
+        }*/
         free(gTumor);
         free(gNormal);
         return qPosteriorSum;
@@ -257,8 +257,6 @@ int main(int argc, char *argv[])
             case 'N': d->c->n_hap = atoi(optarg); break;
             case 'r': d->c->het_rate = atoi(optarg); break;
             case 'q': d->mapQ = atoi(optarg); break;
-            case 'I': d->ido->q_indel = atoi(optarg); break;
-            case 'G': d->ido->r_indel = atof(optarg); break;
             case 'Q': d->min_somatic_qual = atoi(optarg); break;         
             case 'p': use_priors = 0; break;         
             default: fprintf(stderr, "Unrecognizd option '-%c'.\n", c); return 1;
@@ -266,19 +264,17 @@ int main(int argc, char *argv[])
     }
     if (optind == argc) {
         fprintf(stderr, "\n");
-        fprintf(stderr, "somaticsniper [options] -f <ref.fasta> <tumor.bam> <normal.bam> <snp_output_file> <indel_output_file>\n\n");
+        fprintf(stderr, "somaticsniper [options] -f <ref.fasta> <tumor.bam> <normal.bam> <snp_output_file>\n\n");
         fprintf(stderr, "Required Option: \n");
         fprintf(stderr, "        -f FILE   REQUIRED reference sequence in the FASTA format\n\n");
         fprintf(stderr, "Options: \n");
         fprintf(stderr, "        -q INT    filtering reads with mapping quality less than INT [%d]\n", d->mapQ);
-        fprintf(stderr, "        -Q INT    filtering somatic snp output(NOT INDELS!) with somatic quality less than  INT [15]\n");
+        fprintf(stderr, "        -Q INT    filtering somatic snp output with somatic quality less than  INT [15]\n");
         fprintf(stderr, "        -p FLAG   disable priors in the somatic calculation. Increases sensitivity for solid tumors\n");
         fprintf(stderr, "        -T FLOAT  theta in maq consensus calling model (for -c/-g) [%f]\n", d->c->theta);
         fprintf(stderr, "        -N INT    number of haplotypes in the sample (for -c/-g) [%d]\n", d->c->n_hap);
 
         fprintf(stderr, "        -r FLOAT  prior of a difference between two haplotypes (for -c/-g) [%f]\n", d->c->het_rate);
-        fprintf(stderr, "        -G FLOAT  prior of an indel between two haplotypes (for -c/-g) [%f]\n", d->ido->r_indel);
-        fprintf(stderr, "        -I INT    phred prob. of an indel in sequencing/prep. (for -c/-g) [%d]\n", d->ido->q_indel);
         fprintf(stderr, "\n");
         free(fn_fa); sniper_maqcns_destroy(d->c); free(d->ido); free(d);
         return 1;
@@ -311,14 +307,14 @@ int main(int argc, char *argv[])
     d->h2 = bam_header_read(fp2);
     sam_header_parse_rg(d->h2);
     FILE* snp_fh = fopen(argv[optind+2], "w");
-    FILE* indel_fh = fopen(argv[optind+3], "w");
+    FILE* indel_fh = NULL; //fopen(argv[optind+3], "w");
 
-    if(snp_fh && indel_fh) {
+    if(snp_fh) {
         //NEED TO ADD IN AN ACTUAL FUNCTION NAME HERE
         bam_sspileup_file(fp1, fp2, d->mask, d->mapQ, glf_somatic, d, snp_fh, indel_fh);
     }
     else {
-        fprintf(stderr, "Unable to open snp or indel files!!!!!!!!!\n");
+        fprintf(stderr, "Unable to open snp file!!!!!!!!!\n");
         exit(1);
     }
 
@@ -331,7 +327,7 @@ int main(int argc, char *argv[])
     sniper_maqcns_destroy(d->c);
     free(d->ido); free(d->ref); free(d);
     fclose(snp_fh);
-    fclose(indel_fh);
+    //fclose(indel_fh);
     return 0;
 }
 
