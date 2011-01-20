@@ -1,0 +1,15 @@
+*.deb
+CMakeCache.txt
+CMakeFiles/
+CPackConfig.cmake
+CPackSourceConfig.cmake
+CTestTestfile.cmake
+Makefile
+Testing/
+_CPack_Packages/
+bin/
+build/
+cmake_install.cmake
+debian/postinst
+debian/prerm
+install_manifest.txt
