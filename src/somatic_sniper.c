@@ -8,6 +8,7 @@
 #include "khash.h"
 #include "kstring.h"
 #include "somatic_sniper.h"
+#include "mean_qualities.h"
 
 typedef int *indel_list_t;
 KHASH_MAP_INIT_INT64(64, indel_list_t)
@@ -128,8 +129,6 @@ glf3_t *sniper_maqindel2glf(sniper_maqindel_ret_t *r, int n) {
     return g3;
 }
 
-
-
 static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t *pl1, const bam_pileup1_t *pl2, void *data, FILE *snp_fh, FILE *indel_fh) {
     //hacked copy from function gl3_func behavior to get a g with 10 probabilities to do somatic probability calculation    
     pu_data2_t *d = (pu_data2_t*)data;
@@ -153,8 +152,9 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
         //fprintf(stderr,"---Tumor---\n");
         //printGLF(&gTumor);
 
-        uint32_t x;
+        uint32_t x,y;
         x = sniper_maqcns_call(n1, pl1, d->c);
+        y = sniper_maqcns_call(n2, pl2, d->c);
         int  ref_q, rb4 = bam_nt16_table[rb];
         if (rb4 != 15 && x>>28 != 15 && x>>28 != rb4) { // a SNP
             ref_q = 0;
@@ -176,7 +176,47 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
 
             // int result = qAdd(0,-qPosteriorSum);
             if(d->min_somatic_qual <= qPosteriorSum) {  
-                fprintf(snp_fh, "%s\t%d\t%c\t%c\t%d\t%d\t%d\t%d\t%d\t%d\n",d->h1->target_name[tid], pos + 1 , rb, bam_nt16_rev_table[x>>28], qPosteriorSum, x>>8&0xff, ref_q, x>>16&0xff, n1, n2);
+                int tumor_call = x >> 28;
+                int normal_call = y >> 28;
+                uint32_t mean_baseQ[4] = {0};
+                uint32_t mean_mapQ[4] = {0};
+                uint32_t count_baseQ[4] = {0};
+                uint32_t count_mapQ[4] = {0};
+                int need_comma = 0;
+                int i;
+                fprintf(snp_fh, "%s\t%d\t%c\t%c\t%c\t%d\t%d\t%d\t%d\t%d\t%d\t",d->h1->target_name[tid], pos + 1 , rb, bam_nt16_rev_table[x>>28], bam_nt16_rev_table[y>>28], qPosteriorSum, x>>8&0xff, ref_q, x>>16&0xff, n1, n2);
+
+                /* mean {map,base} quality for tumor */
+                mean_quality_values(pl1, n1, rb4|tumor_call, mean_baseQ, count_baseQ, mean_mapQ, count_mapQ);
+                print_mean_quality_values(snp_fh, rb4, mean_baseQ);
+                fputc('\t', snp_fh);
+                print_mean_quality_values(snp_fh, rb4, mean_mapQ);
+                fputc('\t', snp_fh);
+                print_base_count(snp_fh, rb4, count_baseQ);
+                fputc('\t', snp_fh);
+                print_mean_quality_values(snp_fh, ~rb4&tumor_call, mean_baseQ);
+                fputc('\t', snp_fh);
+                print_mean_quality_values(snp_fh, ~rb4&tumor_call, mean_mapQ);
+                fputc('\t', snp_fh);
+                print_base_count(snp_fh, ~rb4&tumor_call, count_baseQ);
+                fputc('\t', snp_fh);
+
+                /* mean {map,base} quality for normal */
+                mean_quality_values(pl2, n2, rb4|normal_call, mean_baseQ, count_baseQ, mean_mapQ, count_mapQ);
+                print_mean_quality_values(snp_fh, rb4, mean_baseQ);
+                fputc('\t', snp_fh);
+                print_mean_quality_values(snp_fh, rb4, mean_mapQ);
+                fputc('\t', snp_fh);
+                print_base_count(snp_fh, rb4, count_baseQ);
+                fputc('\t', snp_fh);
+                print_mean_quality_values(snp_fh, ~rb4&normal_call, mean_baseQ);
+                fputc('\t', snp_fh);
+                print_mean_quality_values(snp_fh, ~rb4&normal_call, mean_mapQ);
+                fputc('\t', snp_fh);
+                print_base_count(snp_fh, ~rb4&normal_call, count_baseQ);
+                fputc('\n', snp_fh);
+
+                fflush(snp_fh);
             }
         }/*    
         r = sniper_maqindel(n1, pos, d->ido, pl1, d->ref, 0,0, d->h1);
