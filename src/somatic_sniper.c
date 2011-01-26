@@ -12,7 +12,7 @@
 
 typedef int *indel_list_t;
 KHASH_MAP_INIT_INT64(64, indel_list_t)
-int get_next_pos(bam_plbuf_t *buf,bamFile fp); 
+int get_next_pos(bam_plbuf_t *buf,bamFile fp);
 #define BAM_PLF_SIMPLE     0x01
 #define BAM_PLF_CNS        0x02
 #define BAM_PLF_INDEL_ONLY 0x04
@@ -79,7 +79,7 @@ void calculatePosteriors(glf1_t *g, int lkResult[]) {
     int j;
 
     //Calculate Posteriors
-    for (j = 0 ; j < 10 ; ++j) { 
+    for (j = 0 ; j < 10 ; ++j) {
         int x = g->lk[j] + prior[refBase][j];
         qSum = qAdd (x, qSum) ;
         if (x < qMin) qMin = x ;
@@ -130,7 +130,7 @@ glf3_t *sniper_maqindel2glf(sniper_maqindel_ret_t *r, int n) {
 }
 
 static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t *pl1, const bam_pileup1_t *pl2, void *data, FILE *snp_fh, FILE *indel_fh) {
-    //hacked copy from function gl3_func behavior to get a g with 10 probabilities to do somatic probability calculation    
+    //hacked copy from function gl3_func behavior to get a g with 10 probabilities to do somatic probability calculation
     pu_data2_t *d = (pu_data2_t*)data;
     //sniper_maqindel_ret_t *r = 0;
     if (d->fai && (int)tid != d->tid) {
@@ -155,12 +155,17 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
         uint32_t x,y;
         x = sniper_maqcns_call(n1, pl1, d->c);
         y = sniper_maqcns_call(n2, pl2, d->c);
-        int  ref_q, rb4 = bam_nt16_table[rb];
+        int tumor_ref_q = 0, normal_ref_q = 0, rb4 = bam_nt16_table[rb];
+        int normal_snp = 0;
         if (rb4 != 15 && x>>28 != 15 && x>>28 != rb4) { // a SNP
-            ref_q = 0;
-            if (rb4 != 15 && x>>28 != 15 && x>>28 != rb4) { // a SNP
-                ref_q = ((x>>24&0xf) == rb4)? x>>8&0xff : (x>>8&0xff) + (x&0xff);
-                if (ref_q > 255) ref_q = 255;
+            tumor_ref_q = (x>>24&0xf == rb4) ? x>>8&0xff : (x>>8&0xff) + (x&0xff);
+            if (tumor_ref_q > 255) tumor_ref_q = 255;
+
+            if (y>>28 != 15 && y >> 28 != rb4)
+            {
+                normal_snp = 1;
+                normal_ref_q = (y>>24&0xf == rb4) ? y>>8&0xff : (y>>8&0xff) + (y&0xff);
+                if (normal_ref_q > 255) normal_ref_q = 255;
             }
 
             calculatePosteriors(gTumor, lkTumor);
@@ -175,7 +180,7 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
             }
 
             // int result = qAdd(0,-qPosteriorSum);
-            if(d->min_somatic_qual <= qPosteriorSum) {  
+            if(d->min_somatic_qual <= qPosteriorSum) {
                 int tumor_call = x >> 28;
                 int normal_call = y >> 28;
                 uint32_t mean_baseQ[4] = {0};
@@ -184,7 +189,28 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
                 uint32_t count_mapQ[4] = {0};
                 int need_comma = 0;
                 int i;
-                fprintf(snp_fh, "%s\t%d\t%c\t%c\t%c\t%d\t%d\t%d\t%d\t%d\t%d\t",d->h1->target_name[tid], pos + 1 , rb, bam_nt16_rev_table[x>>28], bam_nt16_rev_table[y>>28], qPosteriorSum, x>>8&0xff, ref_q, x>>16&0xff, n1, n2);
+                fprintf(snp_fh, "%s\t" "%d\t" "%c\t" "%c\t" "%c\t" "%d\t" "%d\t" "%d\t" "%d\t" "%d\t",
+                    d->h1->target_name[tid],
+                    pos + 1,
+                    rb,
+                    bam_nt16_rev_table[x>>28],
+                    bam_nt16_rev_table[y>>28],
+                    qPosteriorSum,
+                    x>>8&0xff,
+                    tumor_ref_q,
+                    x>>16&0xff,
+                    y>>8&0xff);
+
+                if (normal_snp)
+                    fprintf(snp_fh, "%d\t", normal_ref_q);
+                else
+                    fputs("-\t", snp_fh);
+
+                fprintf(snp_fh, "%d\t%d\t%d\t",
+                    y>>16&0xff,
+                    n1,
+                    n2);
+
 
                 /* mean {map,base} quality for tumor */
                 mean_quality_values(pl1, n1, rb4|tumor_call, mean_baseQ, count_baseQ, mean_mapQ, count_mapQ);
@@ -218,7 +244,7 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
 
                 fflush(snp_fh);
             }
-        }/*    
+        }/*
         r = sniper_maqindel(n1, pos, d->ido, pl1, d->ref, 0,0, d->h1);
         if (r) {
             sniper_maqindel_ret_t *q=0;
@@ -238,14 +264,14 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
             int hom2indelnormal = prob_indel(normal_g3, prior2, HOMO_INDEL2);
             int hom1indelnormal = prob_indel(normal_g3, prior1, HOMO_INDEL1);
             qPosteriorSum = 255;
-            int het_sum = (hetindeltumor+hetindelnormal) > 255 ? 255 : hetindeltumor+hetindelnormal; 
-            int hom1_sum = (hom1indeltumor+hom1indelnormal) > 255 ? 255 : hom1indeltumor+hom1indelnormal;  
-            int hom2_sum = (hom2indeltumor+hom2indelnormal) > 255 ? 255 : hom2indeltumor+hom2indelnormal;  
+            int het_sum = (hetindeltumor+hetindelnormal) > 255 ? 255 : hetindeltumor+hetindelnormal;
+            int hom1_sum = (hom1indeltumor+hom1indelnormal) > 255 ? 255 : hom1indeltumor+hom1indelnormal;
+            int hom2_sum = (hom2indeltumor+hom2indelnormal) > 255 ? 255 : hom2indeltumor+hom2indelnormal;
             //fprintf(stdout,"het_sum:%d\thom1_sum%d\t:hom2_sum%d\n", het_sum, hom1_sum, hom2_sum);
             qPosteriorSum = qAdd(qPosteriorSum, het_sum);
             qPosteriorSum = qAdd(qPosteriorSum, hom1_sum);
             qPosteriorSum = qAdd(qPosteriorSum, hom2_sum);
-            //if(minimum_somatic_qual >= qPosteriorSum) {  
+            //if(minimum_somatic_qual >= qPosteriorSum) {
             //print general info on the site in common among both tumor and normal
             fprintf(indel_fh, "%s\t%d\t*\t%d\t%s\t%s\t%d\t%d\t",d->h1->target_name[tid], pos + 1,qPosteriorSum, tumor_g3->indel_len[0] ? tumor_g3->indel_seq[0] : "*", tumor_g3->indel_len[1] ? tumor_g3->indel_seq[1] : "*", tumor_g3->indel_len[0], tumor_g3->indel_len[1]);
             //next output tumor specific info
@@ -297,8 +323,8 @@ int main(int argc, char *argv[])
             case 'N': d->c->n_hap = atoi(optarg); break;
             case 'r': d->c->het_rate = atoi(optarg); break;
             case 'q': d->mapQ = atoi(optarg); break;
-            case 'Q': d->min_somatic_qual = atoi(optarg); break;         
-            case 'p': use_priors = 0; break;         
+            case 'Q': d->min_somatic_qual = atoi(optarg); break;
+            case 'p': use_priors = 0; break;
             default: fprintf(stderr, "Unrecognizd option '-%c'.\n", c); return 1;
         }
     }
@@ -325,7 +351,7 @@ int main(int argc, char *argv[])
     else {
         fprintf(stderr, "You MUST specify a reference sequence. It isn't optional.\n");
         sniper_maqcns_destroy(d->c);
-        free(d->ido); 
+        free(d->ido);
         free(d);
         exit(1);
     }
@@ -373,8 +399,8 @@ int main(int argc, char *argv[])
 
 
 int prob_indel(glf3_t* indel, int prior_prob, int likelihood_flag) {
-    int i; 
-    int qSum=255;  
+    int i;
+    int qSum=255;
     for (i=0; i < 3; i++) {
         int lk_prior= (int)indel->lk[i] + prior_prob;
         qSum = qAdd(lk_prior, qSum);
