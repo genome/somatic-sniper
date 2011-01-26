@@ -1,7 +1,6 @@
 #include <bam.h>
 #include <assert.h>
 
-/* note: mean_baseQ and mean_mapQ MUST be initialized to 0s or you are going to have a bad day */
 void mean_quality_values(
         const bam_pileup1_t* buf,
         int n_reads,
@@ -21,7 +20,7 @@ void mean_quality_values(
     memset(&count_mapQ[0], 0, 4*sizeof(count_mapQ[0])); 
 
     for (i = 0; i < n_reads; ++i) {
-        if (buf[i].is_del)
+        if (buf[i].is_del || buf[i].b->core.flag&BAM_FUNMAP)
             continue;
 
         int base = bam1_seqi(bam1_seq(buf[i].b), buf[i].qpos);
