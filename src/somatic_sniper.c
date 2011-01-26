@@ -158,13 +158,13 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
         int tumor_ref_q = 0, normal_ref_q = 0, rb4 = bam_nt16_table[rb];
         int normal_snp = 0;
         if (rb4 != 15 && x>>28 != 15 && x>>28 != rb4) { // a SNP
-            tumor_ref_q = (x>>24&0xf == rb4) ? x>>8&0xff : (x>>8&0xff) + (x&0xff);
+            tumor_ref_q = ((x>>24&0xf) == rb4)? x>>8&0xff : (x>>8&0xff) + (x&0xff);
             if (tumor_ref_q > 255) tumor_ref_q = 255;
 
             if (y>>28 != 15 && y >> 28 != rb4)
             {
                 normal_snp = 1;
-                normal_ref_q = (y>>24&0xf == rb4) ? y>>8&0xff : (y>>8&0xff) + (y&0xff);
+                normal_ref_q = ((y>>24&0xf) == rb4)? y>>8&0xff : (y>>8&0xff) + (y&0xff);
                 if (normal_ref_q > 255) normal_ref_q = 255;
             }
 
