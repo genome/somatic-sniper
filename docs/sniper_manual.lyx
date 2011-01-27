@@ -1,8 +1,9 @@
-#LyX 1.5.3 created this file. For more info see http://www.lyx.org/
-\lyxformat 276
+#LyX 1.6.5 created this file. For more info see http://www.lyx.org/
+\lyxformat 345
 \begin_document
 \begin_header
 \textclass article
+\use_default_options false
 \language english
 \inputencoding auto
 \font_roman default
@@ -13,8 +14,10 @@
 \font_osf false
 \font_sf_scale 100
 \font_tt_scale 100
+
 \graphics default
 \paperfontsize default
+\use_hyperref false
 \papersize default
 \use_geometry false
 \use_amsmath 1
@@ -181,6 +184,10 @@ IUB genotype of tumor
 \end_layout
 
 \begin_layout Enumerate
+IUB genotype of normal
+\end_layout
+
+\begin_layout Enumerate
 Somatic Score
 \end_layout
 
@@ -197,15 +204,71 @@ Tumor RMS mapping quality
 \end_layout
 
 \begin_layout Enumerate
+Normal Consensus quality
+\end_layout
+
+\begin_layout Enumerate
+Normal SNV quality
+\end_layout
+
+\begin_layout Enumerate
+Normal RMS mapping quality
+\end_layout
+
+\begin_layout Enumerate
 Depth in tumor (# of reads crossing the position)
 \end_layout
 
 \begin_layout Enumerate
-Depth in normal (# of reads crossing the position
+Depth in normal (# of reads crossing the position)
 \end_layout
 
-\begin_layout Standard
+\begin_layout Enumerate
+Mean base quality of reads supporting reference in tumor
+\end_layout
 
+\begin_layout Enumerate
+Mean mapping quality of reads supporting reference in tumor
+\end_layout
+
+\begin_layout Enumerate
+Depth of reads supporting reference in tumor
+\end_layout
+
+\begin_layout Enumerate
+Mean base quality of reads supporting variant(s) in tumor
+\end_layout
+
+\begin_layout Enumerate
+Mean mapping quality of reads supporting variant(s) in tumor
+\end_layout
+
+\begin_layout Enumerate
+Depth of reads supporting variant(s) in tumor
+\end_layout
+
+\begin_layout Enumerate
+Mean base quality of reads supporting reference in normal
+\end_layout
+
+\begin_layout Enumerate
+Mean mapping quality of reads supporting reference in normal
+\end_layout
+
+\begin_layout Enumerate
+Depth of reads supporting reference in normal
+\end_layout
+
+\begin_layout Enumerate
+Mean base quality of reads supporting variant(s) in normal
+\end_layout
+
+\begin_layout Enumerate
+Mean mapping quality of reads supporting variant(s) in normal
+\end_layout
+
+\begin_layout Enumerate
+Depth of reads supporting variant(s) in normal
 \end_layout
 
 \end_body

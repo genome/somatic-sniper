@@ -39,7 +39,7 @@
 \begin_body
 
 \begin_layout Title
-bam-somaticsniper User Manual
+Somatic Sniper User Manual
 \end_layout
 
 \begin_layout Author
@@ -54,7 +54,7 @@ September 29, 2010
 
 \begin_layout Standard
 The purpose of this program is to identify single nucleotide positions that
- are different between tumor and normal.
+ are different between tumor and normal (or, in theory, any two bam files).
  It takes a tumor bam and a normal bam and compares the two to determine
  the differences.
  It outputs a file in a format very similar to Samtools consensus format.
@@ -78,8 +78,11 @@ The purpose of this program is to identify single nucleotide positions that
 \begin_inset Formula $255$
 \end_inset
 
- means there is a probability of  that the genotypes are different between
- tumor and normal.
+ means there is a probability of 
+\begin_inset Formula $1-10^{\left(\frac{255}{-10}\right)}$
+\end_inset
+
+ that the genotypes are different between tumor and normal.
  This is consistent with how the SAM format reports such probabilities.
 \end_layout
 
@@ -88,8 +91,7 @@ Usage
 \end_layout
 
 \begin_layout Standard
-bam-somaticsniper [options] -f <ref.fasta> <tumor.bam> <normal.bam> <snv_output_fil
-e>
+somaticsniper [options] -f <ref.fasta> <tumor.bam> <normal.bam> <snv_output_file>
 \end_layout
 
 \begin_layout Subsubsection*
@@ -136,15 +138,15 @@ Options:
 \end_layout
 
 \begin_layout Section*
-Notes on running bam-somaticsniper
+Notes on running somaticsniper
 \end_layout
 
 \begin_layout Standard
-Minimally, you must provide the program a reference fasta (passed with the
- -f option) a tumor bam, a normal bam, and the filename of the resulting
- output file.
- We recommend filtering out reads with a mapping quality of 0 (ie use -q
- 1) as they are typically randomly placed in the genome.
+Minimally, you must provide the program the reference fasta the bams were
+ aligned against (passed with the -f option), a tumor bam, a normal bam,
+ and the filename of the resulting output file.
+ We recommend filtering out reads with a mapping quality of 0 (i.e.
+ use -q 1) as they are typically randomly placed in the genome.
  We have also found that few variants with a somatic score less than 15
  validate, but you may decrease the minimum score or increase it to a higher
  threshold (eg -Q 40).
@@ -199,15 +201,7 @@ Depth in tumor (# of reads crossing the position)
 \end_layout
 
 \begin_layout Enumerate
-Depth in normal (# of reads crossing the position)
-\end_layout
-
-\begin_layout Standard
-Note that the IUB Genotype, Consensus Quality and SNV Quality Fields were
- identical to what samtools pileup -c outputs on the tumor data circa Samtools
- version 0.1.2-20.
- They are not composite values based on tumor and normal data.
- 
+Depth in normal (# of reads crossing the position
 \end_layout
 
 \begin_layout Standard
