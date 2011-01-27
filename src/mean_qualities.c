@@ -15,9 +15,9 @@ void mean_quality_values(
     int total = 0;
 
     memset(&mean_baseQ[0], 0, 4*sizeof(mean_baseQ[0]));
-    memset(&mean_mapQ[0], 0, 4*sizeof(mean_mapQ[0])); 
-    memset(&count_baseQ[0], 0, 4*sizeof(count_baseQ[0]));  
-    memset(&count_mapQ[0], 0, 4*sizeof(count_mapQ[0])); 
+    memset(&mean_mapQ[0], 0, 4*sizeof(mean_mapQ[0]));
+    memset(&count_baseQ[0], 0, 4*sizeof(count_baseQ[0]));
+    memset(&count_mapQ[0], 0, 4*sizeof(count_mapQ[0]));
 
     for (i = 0; i < n_reads; ++i) {
         if (buf[i].is_del || buf[i].b->core.flag&BAM_FUNMAP)
