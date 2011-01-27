@@ -187,8 +187,6 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
                 uint32_t mean_mapQ[4] = {0};
                 uint32_t count_baseQ[4] = {0};
                 uint32_t count_mapQ[4] = {0};
-                int need_comma = 0;
-                int i;
                 fprintf(snp_fh, "%s\t" "%d\t" "%c\t" "%c\t" "%c\t" "%d\t" "%d\t" "%d\t" "%d\t" "%d\t",
                     d->h1->target_name[tid],
                     pos + 1,

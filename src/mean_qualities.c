@@ -12,7 +12,6 @@ void mean_quality_values(
         )
 {
     int i, j;
-    int total = 0;
 
     memset(&mean_baseQ[0], 0, 4*sizeof(mean_baseQ[0]));
     memset(&mean_mapQ[0], 0, 4*sizeof(mean_mapQ[0]));
