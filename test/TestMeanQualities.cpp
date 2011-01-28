@@ -51,7 +51,7 @@ TEST(MeanQualities, print) {
     fh = tmpfile();
     print_mean_quality_values(fh, 0, qual);
     result = get_temp_value(fh);
-    ASSERT_EQ("-", result);
+    ASSERT_EQ("0", result);
     fclose(fh);
 
 }
