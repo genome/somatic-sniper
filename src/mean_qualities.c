@@ -55,7 +55,7 @@ void print_mean_quality_values(FILE* fh, int bases, uint32_t values[4]) {
             need_comma = 1;
         }
     }
-    if (!need_comma) fputc('-', fh);
+    if (!need_comma) fputc('0', fh);
 }
 
 void print_base_count(FILE* fh, int bases, uint32_t counts[4]) {
@@ -70,5 +70,5 @@ void print_base_count(FILE* fh, int bases, uint32_t counts[4]) {
             need_comma = 1;
         }
     }
-    if (!need_comma) fputc('-', fh);
+    if (!need_comma) fputc('0', fh);
 }

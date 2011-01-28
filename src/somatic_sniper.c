@@ -152,20 +152,32 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
         //fprintf(stderr,"---Tumor---\n");
         //printGLF(&gTumor);
 
-        uint32_t x,y;
-        x = sniper_maqcns_call(n1, pl1, d->c);
-        y = sniper_maqcns_call(n2, pl2, d->c);
-        int tumor_ref_q = 0, normal_ref_q = 0, rb4 = bam_nt16_table[rb];
-        int normal_snp = 0;
-        if (rb4 != 15 && x>>28 != 15 && x>>28 != rb4) { // a SNP
-            tumor_ref_q = ((x>>24&0xf) == rb4)? x>>8&0xff : (x>>8&0xff) + (x&0xff);
-            if (tumor_ref_q > 255) tumor_ref_q = 255;
+        uint32_t tumor_cns = sniper_maqcns_call(n1, pl1, d->c);
+        uint32_t normal_cns = sniper_maqcns_call(n2, pl2, d->c);
+        int rb4 = bam_nt16_table[rb];
+        int tumor_base1 = tumor_cns >> 28;
+        int tumor_base2 = tumor_cns >> 24 & 0xf;
+        int tumor_score1 = tumor_cns >> 8 & 0xff;
+        int tumor_score2 = tumor_cns & 0xff;
+        int tumor_rms_mapping = tumor_cns >> 16 & 0xff;
 
-            if (y>>28 != 15 && y >> 28 != rb4)
+        int normal_base1 = normal_cns >> 28;
+        int normal_base2 = normal_cns >> 24 & 0xf;
+        int normal_score1 = normal_cns >> 8 & 0xff;
+        int normal_score2 = normal_cns & 0xff;
+        int normal_rms_mapping = normal_cns >> 16 & 0xff;
+
+        int tumor_snp_q = 0;
+        int normal_snp_q = 0;
+
+        if (rb4 != 15 && tumor_base1 != 15 && tumor_base1 != rb4) { // a SNP
+            tumor_snp_q = (tumor_base2 == rb4)? tumor_score1 : tumor_score1 + tumor_score2;
+            if (tumor_snp_q > 255) tumor_snp_q = 255;
+
+            if (normal_base1 != 15 && normal_base1 != rb4)
             {
-                normal_snp = 1;
-                normal_ref_q = ((y>>24&0xf) == rb4)? y>>8&0xff : (y>>8&0xff) + (y&0xff);
-                if (normal_ref_q > 255) normal_ref_q = 255;
+                normal_snp_q = (normal_base2 == rb4)? normal_score1 : normal_score1 + normal_score2;
+                if (normal_snp_q > 255) normal_snp_q = 255;
             }
 
             calculatePosteriors(gTumor, lkTumor);
@@ -181,63 +193,54 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
 
             // int result = qAdd(0,-qPosteriorSum);
             if(d->min_somatic_qual <= qPosteriorSum) {
-                int tumor_call = x >> 28;
-                int normal_call = y >> 28;
                 uint32_t mean_baseQ[4] = {0};
                 uint32_t mean_mapQ[4] = {0};
                 uint32_t count_baseQ[4] = {0};
                 uint32_t count_mapQ[4] = {0};
-                fprintf(snp_fh, "%s\t" "%d\t" "%c\t" "%c\t" "%c\t" "%d\t" "%d\t" "%d\t" "%d\t" "%d\t",
+                fprintf(snp_fh, "%s\t%d\t%c\t%c\t%c\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t",
                     d->h1->target_name[tid],
                     pos + 1,
                     rb,
-                    bam_nt16_rev_table[x>>28],
-                    bam_nt16_rev_table[y>>28],
+                    bam_nt16_rev_table[tumor_base1],
+                    bam_nt16_rev_table[normal_base1],
                     qPosteriorSum,
-                    x>>8&0xff,
-                    tumor_ref_q,
-                    x>>16&0xff,
-                    y>>8&0xff);
-
-                if (normal_snp)
-                    fprintf(snp_fh, "%d\t", normal_ref_q);
-                else
-                    fputs("-\t", snp_fh);
-
-                fprintf(snp_fh, "%d\t%d\t%d\t",
-                    y>>16&0xff,
+                    tumor_score1,
+                    tumor_snp_q,
+                    tumor_rms_mapping,
+                    normal_score1,
+                    normal_snp_q,
+                    normal_rms_mapping,
                     n1,
                     n2);
 
-
                 /* mean {map,base} quality for tumor */
-                mean_quality_values(pl1, n1, rb4|tumor_call, mean_baseQ, count_baseQ, mean_mapQ, count_mapQ);
+                mean_quality_values(pl1, n1, rb4|tumor_base1, mean_baseQ, count_baseQ, mean_mapQ, count_mapQ);
                 print_mean_quality_values(snp_fh, rb4, mean_baseQ);
                 fputc('\t', snp_fh);
                 print_mean_quality_values(snp_fh, rb4, mean_mapQ);
                 fputc('\t', snp_fh);
                 print_base_count(snp_fh, rb4, count_baseQ);
                 fputc('\t', snp_fh);
-                print_mean_quality_values(snp_fh, ~rb4&tumor_call, mean_baseQ);
+                print_mean_quality_values(snp_fh, ~rb4&tumor_base1, mean_baseQ);
                 fputc('\t', snp_fh);
-                print_mean_quality_values(snp_fh, ~rb4&tumor_call, mean_mapQ);
+                print_mean_quality_values(snp_fh, ~rb4&tumor_base1, mean_mapQ);
                 fputc('\t', snp_fh);
-                print_base_count(snp_fh, ~rb4&tumor_call, count_baseQ);
+                print_base_count(snp_fh, ~rb4&tumor_base1, count_baseQ);
                 fputc('\t', snp_fh);
 
                 /* mean {map,base} quality for normal */
-                mean_quality_values(pl2, n2, rb4|normal_call, mean_baseQ, count_baseQ, mean_mapQ, count_mapQ);
+                mean_quality_values(pl2, n2, rb4|normal_base1, mean_baseQ, count_baseQ, mean_mapQ, count_mapQ);
                 print_mean_quality_values(snp_fh, rb4, mean_baseQ);
                 fputc('\t', snp_fh);
                 print_mean_quality_values(snp_fh, rb4, mean_mapQ);
                 fputc('\t', snp_fh);
                 print_base_count(snp_fh, rb4, count_baseQ);
                 fputc('\t', snp_fh);
-                print_mean_quality_values(snp_fh, ~rb4&normal_call, mean_baseQ);
+                print_mean_quality_values(snp_fh, ~rb4&normal_base1, mean_baseQ);
                 fputc('\t', snp_fh);
-                print_mean_quality_values(snp_fh, ~rb4&normal_call, mean_mapQ);
+                print_mean_quality_values(snp_fh, ~rb4&normal_base1, mean_mapQ);
                 fputc('\t', snp_fh);
-                print_base_count(snp_fh, ~rb4&normal_call, count_baseQ);
+                print_base_count(snp_fh, ~rb4&normal_base1, count_baseQ);
                 fputc('\n', snp_fh);
 
                 fflush(snp_fh);
