@@ -152,8 +152,8 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
         //fprintf(stderr,"---Tumor---\n");
         //printGLF(&gTumor);
 
-        uint32_t tumor_cns = sniper_maqcns_call(n1, pl1, d->c);
-        uint32_t normal_cns = sniper_maqcns_call(n2, pl2, d->c);
+        uint32_t tumor_cns = sniper_maqcns_call(n1, gTumor, d->c);
+        uint32_t normal_cns = sniper_maqcns_call(n2, gNormal, d->c);
         int rb4 = bam_nt16_table[rb];
         int tumor_base1 = tumor_cns >> 28;
         int tumor_base2 = tumor_cns >> 24 & 0xf;
