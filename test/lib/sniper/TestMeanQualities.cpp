@@ -1,4 +1,4 @@
-#include "mean_qualities.c"
+#include "sniper/mean_qualities.h"
 
 #include <gtest/gtest.h>
 #include <bam.h>

@@ -1,7 +1,12 @@
 #ifndef SNIPER_MAQCNS_H
 #define SNIPER_MAQCNS_H
 
+#include "sam.h"
 #include "glf.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct __sbmc_aux_t;
 
@@ -31,10 +36,6 @@ typedef struct {
 	int q_cns, q_ref;
     int libs1, libs2;
 } sniper_maqindel_ret_t;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 	sniper_maqcns_t *sniper_maqcns_init();
 	void sniper_maqcns_prepare(sniper_maqcns_t *bm);

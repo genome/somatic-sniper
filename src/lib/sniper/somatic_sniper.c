@@ -1,17 +1,11 @@
+#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
-#include <ctype.h>
-#include "sam.h"
-#include "faidx.h"
-#include "sniper_maqcns.h"
-#include "khash.h"
-#include "kstring.h"
 #include "somatic_sniper.h"
 #include "mean_qualities.h"
 
-typedef int *indel_list_t;
-KHASH_MAP_INIT_INT64(64, indel_list_t)
 int get_next_pos(bam_plbuf_t *buf,bamFile fp);
 #define BAM_PLF_SIMPLE     0x01
 #define BAM_PLF_CNS        0x02
@@ -29,21 +23,6 @@ static int prior[16][10] ;  /* index over reference base, genotype */
 
 #define qAdd(x,y)  (x - qAddTable[512+y-x])
 
-typedef struct {
-    bam_header_t *h1;
-    bam_header_t *h2;
-    sniper_maqcns_t *c;
-    sniper_maqindel_opt_t *ido;
-    faidx_t *fai;
-    khash_t(64) *hash;
-    uint32_t format;
-    int tid, len, last_pos;
-    int mask;
-    int mapQ;
-    int min_somatic_qual;//for limiting snp calls in somatic sniper
-    char *ref;
-    glfFile fp; // for glf output only
-} pu_data2_t;
 
 int prob_indel(glf3_t* indel, int prior_prob, int likelihood_flag);
 sniper_maqindel_ret_t *sniper_somaticindelscore(int n, int pos, const sniper_maqindel_opt_t *mi, const bam_pileup1_t *pl, const char *ref, sniper_maqindel_ret_t *tumor_indel);
@@ -51,9 +30,9 @@ char **__bam_get_lines(const char *fn, int *_n);
 void bam_init_header_hash(bam_header_t *header);
 int32_t bam_get_tid(const bam_header_t *header, const char *seq_name);
 
-static int isHom[16] = {0,1,1,0,1,0,0,0,1,0,0,0,0,0,0,0} ;
-static int isHet[16] = {0,0,0,1,0,1,1,0,0,1,1,0,1,0,0,0} ;
-static int glfBase[10] = { 1, 3, 5, 9, 2, 6, 10, 4, 12, 8 } ; /* mapping from 10 genotypes to 4 bit base coding */
+int isHom[16] = {0,1,1,0,1,0,0,0,1,0,0,0,0,0,0,0} ;
+int isHet[16] = {0,0,0,1,0,1,1,0,0,1,1,0,1,0,0,0} ;
+int glfBase[10] = { 1, 3, 5, 9, 2, 6, 10, 4, 12, 8 } ; /* mapping from 10 genotypes to 4 bit base coding */
 void makeSoloPrior (void)
 {
     int i, b, ref ;
@@ -96,7 +75,8 @@ void calculatePosteriors(glf1_t *g, int lkResult[]) {
     }
 
 }
-static void qAddTableInit (void)
+
+void qAddTableInit (void)
 {
     int i ;
     for (i = 0 ; i < 1000 ; ++i)
@@ -129,7 +109,7 @@ glf3_t *sniper_maqindel2glf(sniper_maqindel_ret_t *r, int n) {
     return g3;
 }
 
-static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t *pl1, const bam_pileup1_t *pl2, void *data, FILE *snp_fh, FILE *indel_fh) {
+int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t *pl1, const bam_pileup1_t *pl2, void *data, FILE *snp_fh, FILE *indel_fh) {
     //hacked copy from function gl3_func behavior to get a g with 10 probabilities to do somatic probability calculation
     pu_data2_t *d = (pu_data2_t*)data;
     //sniper_maqindel_ret_t *r = 0;
@@ -303,101 +283,6 @@ static int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pil
     }
     return -1;
 }
-
-
-
-
-int main(int argc, char *argv[])
-{
-    int c;
-    char *fn_fa = 0;
-    pu_data2_t *d = (pu_data2_t*)calloc(1, sizeof(pu_data2_t));
-    d->min_somatic_qual=0;
-    d->tid = -1; d->mask = BAM_DEF_MASK; d->mapQ = 0;
-    d->c = sniper_maqcns_init();
-    d->ido = sniper_maqindel_opt_init();
-    int use_priors = 1;
-    while ((c = getopt(argc, argv, "f:T:N:r:I:G:q:Q:p")) >= 0) {
-        switch (c) {
-            case 'f': fn_fa = strdup(optarg); break;
-            case 'T': d->c->theta = atof(optarg); break;
-            case 'N': d->c->n_hap = atoi(optarg); break;
-            case 'r': d->c->het_rate = atoi(optarg); break;
-            case 'q': d->mapQ = atoi(optarg); break;
-            case 'Q': d->min_somatic_qual = atoi(optarg); break;
-            case 'p': use_priors = 0; break;
-            default: fprintf(stderr, "Unrecognizd option '-%c'.\n", c); return 1;
-        }
-    }
-    if (optind == argc) {
-        fprintf(stderr, "\n");
-        fprintf(stderr, "somaticsniper [options] -f <ref.fasta> <tumor.bam> <normal.bam> <snp_output_file>\n\n");
-        fprintf(stderr, "Required Option: \n");
-        fprintf(stderr, "        -f FILE   REQUIRED reference sequence in the FASTA format\n\n");
-        fprintf(stderr, "Options: \n");
-        fprintf(stderr, "        -q INT    filtering reads with mapping quality less than INT [%d]\n", d->mapQ);
-        fprintf(stderr, "        -Q INT    filtering somatic snp output with somatic quality less than  INT [15]\n");
-        fprintf(stderr, "        -p FLAG   disable priors in the somatic calculation. Increases sensitivity for solid tumors\n");
-        fprintf(stderr, "        -T FLOAT  theta in maq consensus calling model (for -c/-g) [%f]\n", d->c->theta);
-        fprintf(stderr, "        -N INT    number of haplotypes in the sample (for -c/-g) [%d]\n", d->c->n_hap);
-
-        fprintf(stderr, "        -r FLOAT  prior of a difference between two haplotypes (for -c/-g) [%f]\n", d->c->het_rate);
-        fprintf(stderr, "\n");
-        free(fn_fa); sniper_maqcns_destroy(d->c); free(d->ido); free(d);
-        return 1;
-    }
-    if (fn_fa) {
-        d->fai = fai_load(fn_fa);
-    }
-    else {
-        fprintf(stderr, "You MUST specify a reference sequence. It isn't optional.\n");
-        sniper_maqcns_destroy(d->c);
-        free(d->ido);
-        free(d);
-        exit(1);
-    }
-    free(fn_fa);
-    sniper_maqcns_prepare(d->c);
-    fprintf(stderr,"Preparing to snipe some somatics\n");
-    if(use_priors) {
-        fprintf(stderr,"Using prior probabilities\n");
-        makeSoloPrior();
-    }
-    bamFile fp1, fp2;
-    qAddTableInit();
-    fp1 = (strcmp(argv[optind], "-") == 0)? bam_dopen(fileno(stdin), "r") : bam_open(argv[optind], "r");
-    fprintf(stderr, "Normal bam is %s\n", argv[optind+1]);
-    fprintf(stderr, "Tumor bam is %s\n", argv[optind]);
-    d->h1 = bam_header_read(fp1);
-    sam_header_parse_rg(d->h1);
-    fp2 = bam_open(argv[optind+1], "r");
-    d->h2 = bam_header_read(fp2);
-    sam_header_parse_rg(d->h2);
-    FILE* snp_fh = fopen(argv[optind+2], "w");
-    FILE* indel_fh = NULL; //fopen(argv[optind+3], "w");
-
-    if(snp_fh) {
-        //NEED TO ADD IN AN ACTUAL FUNCTION NAME HERE
-        bam_sspileup_file(fp1, fp2, d->mask, d->mapQ, glf_somatic, d, snp_fh, indel_fh);
-    }
-    else {
-        fprintf(stderr, "Unable to open snp file!!!!!!!!!\n");
-        exit(1);
-    }
-
-    bam_close(fp1);
-    bam_close(fp2);
-    kh_destroy(64, d->hash);
-    bam_header_destroy(d->h1);
-    bam_header_destroy(d->h2);
-    if (d->fai) fai_destroy(d->fai);
-    sniper_maqcns_destroy(d->c);
-    free(d->ido); free(d->ref); free(d);
-    fclose(snp_fh);
-    //fclose(indel_fh);
-    return 0;
-}
-
 
 int prob_indel(glf3_t* indel, int prior_prob, int likelihood_flag) {
     int i;

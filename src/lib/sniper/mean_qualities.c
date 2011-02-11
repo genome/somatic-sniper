@@ -12,6 +12,7 @@ void mean_quality_values(
         )
 {
     int i, j;
+    int base;
 
     memset(&mean_baseQ[0], 0, 4*sizeof(mean_baseQ[0]));
     memset(&mean_mapQ[0], 0, 4*sizeof(mean_mapQ[0]));
@@ -22,7 +23,7 @@ void mean_quality_values(
         if (buf[i].is_del || buf[i].b->core.flag&BAM_FUNMAP)
             continue;
 
-        int base = bam1_seqi(bam1_seq(buf[i].b), buf[i].qpos);
+        base = bam1_seqi(bam1_seq(buf[i].b), buf[i].qpos);
         for (j = 0; j < 4; ++j) {
             int value = 1 << j;
             if (base & value & wanted_bases) {
