@@ -1,5 +1,0 @@
-macro(def_test testName)
-    add_executable(Test${testName} Test${testName}.cpp ${COMMON_SOURCES} ${EXTRA_SOURCES})
-    target_link_libraries(Test${testName} ${TEST_LIBS} ${GTEST_BOTH_LIBRARIES})
-    add_test(Test${testName} Test${testName})
-endmacro(def_test testName)

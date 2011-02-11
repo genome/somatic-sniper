@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
 project(somatic_sniper)
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/build-common/cmake")
 include(TestHelper)
 
 # TODO: replace with FindSamtools.cmake
