@@ -8,6 +8,10 @@ include(TestHelper)
 include(VersionHelper)
 include(ProjectHelper)
 
+# NOTE: for sniper we want the exe suffix to be like 0.7.4, not just 0.7
+#       which is the default from VersionHelper
+set(EXE_VERSION_SUFFIX ${FULL_VERSION})
+
 configure_file(version/version.h.in version/version.h @ONLY)
 include_directories(version)
 
