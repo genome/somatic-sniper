@@ -8,8 +8,9 @@
 #include "sam.h"
 #include "faidx.h"
 
-#define expPhred(x) (double)exp((double)(-(x))/4.343)
-#define logPhred(x) (int)((x) < 1 ? (0.5-4.343*log(x)) : (-0.5-4.343*log(x)))
+#define PHRED_CONST (4.343)
+#define expPhred(x) (double)exp((double)(-(x))/PHRED_CONST)
+#define logPhred(x) (int)((x) < 1 ? (0.5-PHRED_CONST*log(x)) : (-0.5-PHRED_CONST*log(x)))
 
 #ifdef __cplusplus
 extern "C" {

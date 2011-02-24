@@ -10,10 +10,9 @@ int get_next_pos(bam_plbuf_t *buf,bamFile fp);
 
 static int qAddTable[1024];
 double THETA = 0.001 ;      /* population scaled mutation rate */
-int minimum_somatic_qual = 4; //minimum somatic phred score in order to report the site
 static int prior[16][10] ;  /* index over reference base, genotype */
 
-#define qAdd(x,y)  (x - qAddTable[512+y-x])
+#define qAdd(x,y)  (x + qAddTable[512+y-x])
 
 char **__bam_get_lines(const char *fn, int *_n);
 void bam_init_header_hash(bam_header_t *header);
@@ -23,13 +22,12 @@ int isHom[16] = {0,1,1,0,1,0,0,0,1,0,0,0,0,0,0,0} ;
 int isHet[16] = {0,0,0,1,0,1,1,0,0,1,1,0,1,0,0,0} ;
 int glfBase[10] = { 1, 3, 5, 9, 2, 6, 10, 4, 12, 8 } ; /* mapping from 10 genotypes to 4 bit base coding */
 
-void makeSoloPrior (void)
-{
+void makeSoloPrior (void) {
     int i, b, ref ;
+    for (ref = 0 ; ref < 16 ; ++ref) {
 
-    for (ref = 0 ; ref < 16 ; ++ref)
-        for (i = 0 ; i < 10 ; ++i)
-        { b = glfBase[i] ;
+        for (i = 0 ; i < 10 ; ++i) { 
+            b = glfBase[i] ;
             if (!(b & ~ref))	/* ie b is compatible with ref */
                 prior[ref][i] = 0 ;
             else if (b & ref)	/* ie one allele of b is compatible with ref */
@@ -39,6 +37,7 @@ void makeSoloPrior (void)
             else			/* two mutations */
                 prior[ref][i] = logPhred(THETA*THETA) ;
         }
+    }
 }
 
 void calculatePosteriors(glf1_t *g, int lkResult[]) {
@@ -67,7 +66,7 @@ void qAddTableInit (void) {
     int i ;
     for (i = 0 ; i < 1000 ; ++i) { 
         double e = 1 + expPhred(i-512) ;
-        qAddTable[i] = -logPhred(e) ;
+        qAddTable[i] = logPhred(e) ;
     }
 }
 
