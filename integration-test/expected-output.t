@@ -24,7 +24,7 @@ my $output_file = $tmpfh->filename;
 my $ref_fasta = $rsb->fasta_file;
 ok(-s $ref_fasta, 'reference fasta file exists');
 
-ok(-s $exe, "sniper executable exists at $dir")
+ok(-s $exe, "sniper executable exists at $exe")
     or die "did you build the project?";
 
 my $rv = system("$exe -f $ref_fasta $tumor_bam $normal_bam $output_file");
