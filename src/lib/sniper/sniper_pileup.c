@@ -223,7 +223,7 @@ int get_next_pos(bam_plbuf_t *buf,bamFile fp) {
     }
 }
 
-int bam_sspileup_file(bamFile fp1, bamFile fp2, int mask, int thresh, bam_sspileup_f func, void *func_data, FILE *snp_fh, FILE* indel_fh)
+int bam_sspileup_file(bamFile fp1, bamFile fp2, int mask, int thresh, bam_sspileup_f func, void *func_data, FILE *snp_fh)
 {
     bam_plbuf_t *buf1, *buf2;
     int ret1 = -1, ret2 = -1;
@@ -254,7 +254,7 @@ int bam_sspileup_file(bamFile fp1, bamFile fp2, int mask, int thresh, bam_sspile
             }
         } while(buf2->tid != buf1->tid && buf2->pos != buf1->pos);  //removed assert and added this to hopefully deal with tids with no data
         if(ret1 && ret2) {
-            func(buf1->tid, buf1->pos, ret1, ret2, buf1->pu, buf2->pu, buf1->func_data, snp_fh, indel_fh);
+            func(buf1->tid, buf1->pos, ret1, ret2, buf1->pu, buf2->pu, buf1->func_data, snp_fh);
         }
     }
     bam_plbuf_reset(buf1);  //clear out any remaining data (I hope)

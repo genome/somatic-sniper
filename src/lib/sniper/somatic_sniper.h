@@ -20,7 +20,6 @@ typedef struct {
     bam_header_t *h1;
     bam_header_t *h2;
     sniper_maqcns_t *c;
-    sniper_maqindel_opt_t *ido;
     faidx_t *fai;
     uint32_t format;
     int tid, len, last_pos;
@@ -31,7 +30,7 @@ typedef struct {
     glfFile fp; // for glf output only
 } pu_data2_t;
 
-typedef int (*bam_sspileup_f)(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t *pl1, const bam_pileup1_t *pl2, void *data, FILE* snp_fh, FILE* indel_fh);
+typedef int (*bam_sspileup_f)(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t *pl1, const bam_pileup1_t *pl2, void *data, FILE* snp_fh);
 
 /* data */
 extern int isHom[16];
@@ -43,8 +42,8 @@ extern int glfBase[10];
 void qAddTableInit (void);
 void makeSoloPrior (void);
 int get_next_pos(bam_plbuf_t *buf,bamFile fp); 
-int bam_sspileup_file(bamFile fp1, bamFile fp2, int mask, int thresh, bam_sspileup_f func, void *func_data, FILE *snp_fh, FILE* indel_fh);
-int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t *pl1, const bam_pileup1_t *pl2, void *data, FILE *snp_fh, FILE *indel_fh);
+int bam_sspileup_file(bamFile fp1, bamFile fp2, int mask, int thresh, bam_sspileup_f func, void *func_data, FILE *snp_fh);
+int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t *pl1, const bam_pileup1_t *pl2, void *data, FILE *snp_fh);
 
 #ifdef __cplusplus
 }
