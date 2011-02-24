@@ -14,9 +14,8 @@ void mean_quality_values(
         int n_reads,
         uint32_t wanted_bases,
         uint32_t mean_baseQ[4],
-        uint32_t count_baseQ[4],
         uint32_t mean_mapQ[4],
-        uint32_t count_mapQ[4]
+        uint32_t base_occ[4]
         );
 
 void print_mean_quality_values(FILE* fh, int bases, uint32_t values[4]);

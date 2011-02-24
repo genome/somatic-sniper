@@ -6,9 +6,8 @@ void mean_quality_values(
         int n_reads,
         uint32_t wanted_bases,
         uint32_t mean_baseQ[4],
-        uint32_t count_baseQ[4],
         uint32_t mean_mapQ[4],
-        uint32_t count_mapQ[4]
+        uint32_t base_occ[4]
         )
 {
     int i, j;
@@ -16,8 +15,8 @@ void mean_quality_values(
 
     memset(&mean_baseQ[0], 0, 4*sizeof(mean_baseQ[0]));
     memset(&mean_mapQ[0], 0, 4*sizeof(mean_mapQ[0]));
-    memset(&count_baseQ[0], 0, 4*sizeof(count_baseQ[0]));
-    memset(&count_mapQ[0], 0, 4*sizeof(count_mapQ[0]));
+    memset(&base_occ[0], 0, 4*sizeof(base_occ[0]));
+    memset(&base_occ[0], 0, 4*sizeof(base_occ[0]));
 
     for (i = 0; i < n_reads; ++i) {
         if (buf[i].is_del || buf[i].b->core.flag&BAM_FUNMAP)
@@ -28,19 +27,17 @@ void mean_quality_values(
             int value = 1 << j;
             if (base & value & wanted_bases) {
                 mean_baseQ[j] += bam1_qual(buf[i].b)[buf[i].qpos];
-                ++count_baseQ[j];
-
                 mean_mapQ[j] += buf[i].b->core.qual;
-                ++count_mapQ[j];
+                ++base_occ[j];
             }
         }
     }
 
     for (i = 0; i < 4; ++i) {
-        if (count_baseQ[i] > 0)
-            mean_baseQ[i] = mean_baseQ[i]/(double)count_baseQ[i] + .499;
-        if (count_mapQ[i] > 0)
-            mean_mapQ[i] = mean_mapQ[i]/(double)count_mapQ[i] + .499;
+        if (base_occ[i] > 0) {
+            mean_baseQ[i] = mean_baseQ[i]/(double)base_occ[i] + .499;
+            mean_mapQ[i] = mean_mapQ[i]/(double)base_occ[i] + .499;
+        }
     }
 }
 
