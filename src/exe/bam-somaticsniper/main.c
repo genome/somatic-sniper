@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
     }
     if (optind == argc) {
         usage(argv[0], d);
-        free(fn_fa); sniper_maqcns_destroy(d->c); free(d->ido); free(d);
+        free(fn_fa); sniper_maqcns_destroy(d->c); free(d);
         return 1;
     }
     if (fn_fa) {
@@ -66,7 +66,6 @@ int main(int argc, char *argv[]) {
     else {
         fprintf(stderr, "You MUST specify a reference sequence. It isn't optional.\n");
         sniper_maqcns_destroy(d->c);
-        free(d->ido);
         free(d);
         exit(1);
     }
@@ -88,11 +87,8 @@ int main(int argc, char *argv[]) {
     d->h2 = bam_header_read(fp2);
     sam_header_parse_rg(d->h2);
     FILE* snp_fh = fopen(argv[optind+2], "w");
-    FILE* indel_fh = NULL; 
-
     if(snp_fh) {
-        //NEED TO ADD IN AN ACTUAL FUNCTION NAME HERE
-        bam_sspileup_file(fp1, fp2, d->mask, d->mapQ, glf_somatic, d, snp_fh, indel_fh);
+        bam_sspileup_file(fp1, fp2, d->mask, d->mapQ, glf_somatic, d, snp_fh);
     }
     else {
         fprintf(stderr, "Unable to open snp file!!!!!!!!!\n");
@@ -105,9 +101,7 @@ int main(int argc, char *argv[]) {
     bam_header_destroy(d->h2);
     if (d->fai) fai_destroy(d->fai);
     sniper_maqcns_destroy(d->c);
-    free(d->ido); free(d->ref); free(d);
+    free(d->ref); free(d);
     fclose(snp_fh);
-    if (indel_fh)
-        fclose(indel_fh);
     return 0;
 }
