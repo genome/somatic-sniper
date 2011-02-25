@@ -11,4 +11,4 @@ set(SOURCES
 )
 
 add_library(sniper ${SOURCES})
-target_link_libraries(sniper z m bam)
+target_link_libraries(sniper m ${Samtools_LIBRARIES})
