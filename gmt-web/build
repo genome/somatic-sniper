@@ -1,0 +1,41 @@
+#!/bin/bash
+
+mydir=`dirname $0`
+cd $mydir
+mydir=`pwd`
+output_dir=$mydir/generated
+doc_basename=sniper_manual
+src_path=$mydir/../docs/$doc_basename.lyx
+
+function have_program() {
+    prog=$1
+    pkg_suggestion=$2
+    prog_path=`which $prog`
+    if [ -z "$prog_path" -o ! -x $prog_path ]
+    then
+        echo "Failed to find required program $prog!"
+        if [ ! -z "$pkg_suggestion" ]
+        then
+            echo "Try sudo apt-get install $pkg_suggestion"
+        fi
+        exit 1
+    fi
+}
+
+have_program lyx lyx
+
+tmpdir=`mktemp -d`
+cp $src_path $tmpdir
+pushd $tmpdir
+lyx --export xhtml $doc_basename.lyx
+lyx --export pdf $doc_basename.lyx
+lyx --export latex $doc_basename.lyx
+rm -rf $output_dir
+mkdir -p $output_dir
+sed 's;<a id=.magicparlabel-[0-9]*. />;;g' $doc_basename.xhtml > $output_dir/$doc_basename.html
+mv $doc_basename.pdf $output_dir
+mv $doc_basename.tex $output_dir
+popd
+rm -rf $tmpdir
+
+ls -l $output_dir
