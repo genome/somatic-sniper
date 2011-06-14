@@ -23,16 +23,17 @@ function have_program() {
 }
 
 have_program lyx lyx
+have_program mk4ht tex4ht
 
 tmpdir=`mktemp -d`
 cp $src_path $tmpdir
 pushd $tmpdir
-lyx --export xhtml $doc_basename.lyx
 lyx --export pdf $doc_basename.lyx
 lyx --export latex $doc_basename.lyx
+mk4ht xhmlatex $doc_basename.tex
 rm -rf $output_dir
 mkdir -p $output_dir
-sed 's;<a id=.magicparlabel-[0-9]*. />;;g' $doc_basename.xhtml > $output_dir/$doc_basename.html
+sed 's;<a id=.magicparlabel-[0-9]*. />;;g' $doc_basename.html > $output_dir/$doc_basename.html
 mv $doc_basename.pdf $output_dir
 mv $doc_basename.tex $output_dir
 popd
