@@ -1,0 +1,15 @@
+---
+layout: sub
+menu: 
+    - text: Home
+      href: index.html
+    - text: Documentation
+      href: documentation.html
+    - text: Install
+      href: install.html
+
+module_details:
+    name: 'Somatic Sniper'
+    icon: res/images/icon_48.png
+    pkg_name: somatic-sniper
+    exe_name: bam-somaticsniper
