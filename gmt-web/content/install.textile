@@ -7,7 +7,7 @@ p(terminal). ==wget -q -O - http://apt.genome.wustl.edu/ubuntu/files/install.sh 
 
 p. To install {{ page.module_details.name }}, run:
 
-p(terminal). ==genome install {{ page.module_details.pkg_name }}{{ page.full_version }}==
+p(terminal). ==genome install {{ page.module_details.pkg_name }}{{ page.version_suffix }}==
 
 h3. Behind the Scenes:
 
@@ -21,7 +21,7 @@ p(terminal). ==sudo apt-add-respository "deb http://apt.genome.wustl.edu lucid-g
 
 p. install {{ page.module_details.name }}:
 
-p(terminal). ==sudo apt-get install {{ page.module_details.pkg_name }}{{ page.full_version }}==
+p(terminal). ==sudo apt-get install {{ page.module_details.pkg_name }}{{ page.version_suffix }}==
 
 h2. Other Platforms/source code:
 ==<hr />==
