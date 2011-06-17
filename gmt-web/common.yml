@@ -13,3 +13,5 @@ module_details:
     icon: res/images/icon_48.png
     pkg_name: somatic-sniper
     exe_name: bam-somaticsniper
+
+download_link: install.html
