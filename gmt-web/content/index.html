@@ -1,5 +1,5 @@
 <h2>Introduction</h2>
-hr />
+<hr />
 
 <p>The purpose of this program is to identify single nucleotide positions that are different between tumor and normal (or, in theory, any two bam files). It takes a tumor bam and a normal bam and compares the two to determine the differences. It outputs a file in a format very similar to Samtools consensus format. It uses the genotype likelihood model of MAQ (as implemented in Samtools) and then calculates the probability that the tumor and normal genotypes are different. This probability is reported as a somatic score. The somatic score is the Phred-scaled probability (between 0 to 255) that the Tumor and Normal genotypes are not different where 0 means there is no probability that the genotypes are different and 255 means there is a probability of 1 – 10<sup>(255/-10)</sup> that the genotypes are different between tumor and normal. This is consistent with how the SAM format reports such probabilities. It is currently available as a pre-complied 64-bit Linux binary.
 </p>
