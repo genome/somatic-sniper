@@ -29,6 +29,9 @@ typedef struct {
     int min_somatic_qual;//for limiting snp calls in somatic sniper
     char *ref;
     glfFile fp; // for glf output only
+    //for alternative prior construction
+    int use_joint_priors;
+    double somatic_mutation_rate;
 } pu_data2_t;
 
 typedef int (*bam_sspileup_f)(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t *pl1, const bam_pileup1_t *pl2, void *data, FILE* snp_fh);
@@ -42,6 +45,7 @@ extern int glfBase[10];
 /* functions */
 void qAddTableInit (void);
 void makeSoloPrior (void);
+void make_joint_prior (double somatic_rate);
 int get_next_pos(bam_plbuf_t *buf,bamFile fp); 
 int bam_sspileup_file(bamFile fp1, bamFile fp2, int mask, int thresh, bam_sspileup_f func, void *func_data, FILE *snp_fh);
 int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t *pl1, const bam_pileup1_t *pl2, void *data, FILE *snp_fh);

@@ -28,6 +28,8 @@ void usage(const char* progname, pu_data2_t* d) {
     fprintf(stderr, "        -q INT    filtering reads with mapping quality less than INT [%d]\n", d->mapQ);
     fprintf(stderr, "        -Q INT    filtering somatic snp output with somatic quality less than  INT [15]\n");
     fprintf(stderr, "        -p FLAG   disable priors in the somatic calculation. Increases sensitivity for solid tumors\n");
+    fprintf(stderr, "        -J FLAG   Use prior probabilities accounting for the somatic mutation rate\n");
+    fprintf(stderr, "        -s FLOAT  prior probability of a somatic mutation (used only with -J) [%f]\n",d->somatic_mutation_rate);
     fprintf(stderr, "        -T FLOAT  theta in maq consensus calling model (for -c/-g) [%f]\n", d->c->theta);
     fprintf(stderr, "        -N INT    number of haplotypes in the sample (for -c/-g) [%d]\n", d->c->n_hap);
 
@@ -43,7 +45,9 @@ int main(int argc, char *argv[]) {
     d->tid = -1; d->mask = BAM_DEF_MASK; d->mapQ = 0;
     d->c = sniper_maqcns_init();
     int use_priors = 1;
-    while ((c = getopt(argc, argv, "f:T:N:r:I:G:q:Q:p")) >= 0) {
+    d->use_joint_priors = 0;
+    d->somatic_mutation_rate = 0.000001;
+    while ((c = getopt(argc, argv, "f:T:N:r:I:G:q:Q:pJs:")) >= 0) {
         switch (c) {
             case 'f': fn_fa = strdup(optarg); break;
             case 'T': d->c->theta = atof(optarg); break;
@@ -52,6 +56,8 @@ int main(int argc, char *argv[]) {
             case 'q': d->mapQ = atoi(optarg); break;
             case 'Q': d->min_somatic_qual = atoi(optarg); break;
             case 'p': use_priors = 0; break;
+            case 'J': d->use_joint_priors = 1; break;
+            case 's': d->somatic_mutation_rate = atof(optarg); break;         
             default: fprintf(stderr, "Unrecognizd option '-%c'.\n", c); return 1;
         }
     }
@@ -69,6 +75,11 @@ int main(int argc, char *argv[]) {
         free(d);
         exit(1);
     }
+    if(d->use_joint_priors) {
+        fprintf(stderr,"Using priors accounting for somatic mutation rate. Prior probability of a somatic mutation is %f\n",d->somatic_mutation_rate);
+        make_joint_prior(d->somatic_mutation_rate);
+    }
+ 
     free(fn_fa);
     sniper_maqcns_prepare(d->c);
     fprintf(stderr,"Preparing to snipe some somatics\n");

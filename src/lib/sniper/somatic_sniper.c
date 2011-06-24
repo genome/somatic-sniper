@@ -11,6 +11,7 @@ int get_next_pos(bam_plbuf_t *buf,bamFile fp);
 static int qAddTable[1024];
 double THETA = 0.001 ;      /* population scaled mutation rate */
 static int prior[16][10] ;  /* index over reference base, genotype */
+static int jointprior[16][10][10];  /* index over reference base, genotype for more accurate priors */
 
 #define qAdd(x,y)  (x + qAddTable[512+y-x])
 
@@ -36,6 +37,38 @@ void makeSoloPrior (void) {
                 prior[ref][i] = logPhred(0.5*THETA) ;
             else			/* two mutations */
                 prior[ref][i] = logPhred(THETA*THETA) ;
+        }
+    }
+}
+
+void make_joint_prior (double somatic_rate) {
+    int i, j, b, c, ref ;
+    int germline_prior;
+
+    for (ref = 0 ; ref < 16 ; ++ref) {
+        for (i = 0 ; i < 10 ; ++i) { 
+            b = glfBase[i] ;
+            if (!(b & ~ref))
+                germline_prior = 0 ;
+            else if (b & ref)	
+                germline_prior = logPhred(THETA) ;
+            else if (isHom[b])
+                germline_prior = logPhred(0.5*THETA) ;
+            else			
+                germline_prior = logPhred(THETA*THETA) ;
+            for(j = 0; j < 10; ++j) {
+                c =glfBase[j];
+                if(b == c)
+                    jointprior[ref][i][j] = germline_prior;
+                else if( (b & c) && isHet[j])
+                    jointprior[ref][i][j] = germline_prior + logPhred(somatic_rate);
+                else if((b & c) && isHom[j])
+                    jointprior[ref][i][j] = germline_prior + logPhred(somatic_rate);
+                else if(isHom[j])
+                    jointprior[ref][i][j] = germline_prior + logPhred(somatic_rate * somatic_rate);
+                else
+                    jointprior[ref][i][j] = germline_prior + logPhred(somatic_rate * somatic_rate);
+            }
         }
     }
 }
@@ -123,9 +156,31 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
             calculatePosteriors(gTumor, lkTumor);
             calculatePosteriors(gNormal, lkNormal);
 
-            int j;
-            for(j = 0; j < 10; j++) {
-                qPosteriorSum = qAdd(qPosteriorSum,(lkTumor[j] + lkNormal[j]));
+            if(d->use_joint_priors) {
+                //here we will use more somatic prior probabilities and calculate the marginals in place
+                int joint_lk[10][10] ;
+                int marginal_probability = 255;
+                int i,j;
+                for(i = 0; i < 10; i++) {
+                    for(j = 0; j < 10; j++) {
+                        joint_lk[i][j] = (int)gNormal->lk[i] + (int)gTumor->lk[j] + jointprior[rb4][i][j];
+                        if(joint_lk[i][j] > 255) {
+                            joint_lk[i][j] = 255;
+                        }
+                        marginal_probability = qAdd(marginal_probability,joint_lk[i][j]);
+                    }
+                }
+                
+                for(j = 0; j < 10; j++) {
+                    int lk = joint_lk[j][j] - marginal_probability;
+                    qPosteriorSum = qAdd(qPosteriorSum,lk);
+                }
+            }
+            else {
+                int j;
+                for(j = 0; j < 10; j++) {
+                    qPosteriorSum = qAdd(qPosteriorSum,(lkTumor[j] + lkNormal[j]));
+                }
             }
 
             if(d->min_somatic_qual <= qPosteriorSum) {
