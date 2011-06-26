@@ -29,7 +29,7 @@ void usage(const char* progname, pu_data2_t* d) {
     fprintf(stderr, "        -Q INT    filtering somatic snp output with somatic quality less than  INT [15]\n");
     fprintf(stderr, "        -p FLAG   disable priors in the somatic calculation. Increases sensitivity for solid tumors\n");
     fprintf(stderr, "        -J FLAG   Use prior probabilities accounting for the somatic mutation rate\n");
-    fprintf(stderr, "        -s FLOAT  prior probability of a somatic mutation (used only with -J) [%f]\n",d->somatic_mutation_rate);
+    fprintf(stderr, "        -s FLOAT  prior probability of a somatic mutation (implies -J) [%f]\n",d->somatic_mutation_rate);
     fprintf(stderr, "        -S FLAG   output in simple original format\n");
     fprintf(stderr, "        -T FLOAT  theta in maq consensus calling model (for -c/-g) [%f]\n", d->c->theta);
     fprintf(stderr, "        -N INT    number of haplotypes in the sample (for -c/-g) [%d]\n", d->c->n_hap);
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
             case 'Q': d->min_somatic_qual = atoi(optarg); break;
             case 'p': use_priors = 0; break;
             case 'J': d->use_joint_priors = 1; break;
-            case 's': d->somatic_mutation_rate = atof(optarg); break;         
+            case 's': d->somatic_mutation_rate = atof(optarg); d->use_joint_priors = 1; break;         
             case 'S': d->format = FORMAT_SIMPLE; break;         
             default: fprintf(stderr, "Unrecognizd option '-%c'.\n", c); return 1;
         }
