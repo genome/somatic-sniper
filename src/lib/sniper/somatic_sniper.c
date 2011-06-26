@@ -187,52 +187,68 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                 uint32_t mean_baseQ[4] = {0};
                 uint32_t mean_mapQ[4] = {0};
                 uint32_t base_occ[4] = {0};
-                fprintf(snp_fh, "%s\t%d\t%c\t%c\t%c\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t",
-                    d->h1->target_name[tid],
-                    pos + 1,
-                    rb,
-                    bam_nt16_rev_table[tumor_base1],
-                    bam_nt16_rev_table[normal_base1],
-                    qPosteriorSum,
-                    tumor_score1,
-                    tumor_snp_q,
-                    tumor_rms_mapping,
-                    normal_score1,
-                    normal_snp_q,
-                    normal_rms_mapping,
-                    n1,
-                    n2);
+                if(d->format == FORMAT_SIMPLE) {
+                    fprintf(snp_fh, "%s\t%d\t%c\t%c\t%d\t%d\t%d\t%d\t%d\t%d\n",
+                            d->h1->target_name[tid],
+                            pos + 1,
+                            rb,
+                            bam_nt16_rev_table[tumor_base1],
+                            qPosteriorSum,
+                            tumor_score1,
+                            tumor_snp_q,
+                            tumor_rms_mapping,
+                            n1,
+                            n2);
 
-                /* mean {map,base} quality for tumor */
-                mean_quality_values(pl1, n1, rb4|tumor_base1, mean_baseQ, mean_mapQ, base_occ);
-                print_mean_quality_values(snp_fh, rb4, mean_baseQ);
-                fputc('\t', snp_fh);
-                print_mean_quality_values(snp_fh, rb4, mean_mapQ);
-                fputc('\t', snp_fh);
-                print_base_count(snp_fh, rb4, base_occ);
-                fputc('\t', snp_fh);
-                print_mean_quality_values(snp_fh, ~rb4&tumor_base1, mean_baseQ);
-                fputc('\t', snp_fh);
-                print_mean_quality_values(snp_fh, ~rb4&tumor_base1, mean_mapQ);
-                fputc('\t', snp_fh);
-                print_base_count(snp_fh, ~rb4&tumor_base1, base_occ);
-                fputc('\t', snp_fh);
+                }
+                else {
 
-                /* mean {map,base} quality for normal */
-                mean_quality_values(pl2, n2, rb4|normal_base1, mean_baseQ, mean_mapQ, base_occ);
-                print_mean_quality_values(snp_fh, rb4, mean_baseQ);
-                fputc('\t', snp_fh);
-                print_mean_quality_values(snp_fh, rb4, mean_mapQ);
-                fputc('\t', snp_fh);
-                print_base_count(snp_fh, rb4, base_occ);
-                fputc('\t', snp_fh);
-                print_mean_quality_values(snp_fh, ~rb4&normal_base1, mean_baseQ);
-                fputc('\t', snp_fh);
-                print_mean_quality_values(snp_fh, ~rb4&normal_base1, mean_mapQ);
-                fputc('\t', snp_fh);
-                print_base_count(snp_fh, ~rb4&normal_base1, base_occ);
-                fputc('\n', snp_fh);
+                    fprintf(snp_fh, "%s\t%d\t%c\t%c\t%c\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t",
+                            d->h1->target_name[tid],
+                            pos + 1,
+                            rb,
+                            bam_nt16_rev_table[tumor_base1],
+                            bam_nt16_rev_table[normal_base1],
+                            qPosteriorSum,
+                            tumor_score1,
+                            tumor_snp_q,
+                            tumor_rms_mapping,
+                            normal_score1,
+                            normal_snp_q,
+                            normal_rms_mapping,
+                            n1,
+                            n2);
 
+                    /* mean {map,base} quality for tumor */
+                    mean_quality_values(pl1, n1, rb4|tumor_base1, mean_baseQ, mean_mapQ, base_occ);
+                    print_mean_quality_values(snp_fh, rb4, mean_baseQ);
+                    fputc('\t', snp_fh);
+                    print_mean_quality_values(snp_fh, rb4, mean_mapQ);
+                    fputc('\t', snp_fh);
+                    print_base_count(snp_fh, rb4, base_occ);
+                    fputc('\t', snp_fh);
+                    print_mean_quality_values(snp_fh, ~rb4&tumor_base1, mean_baseQ);
+                    fputc('\t', snp_fh);
+                    print_mean_quality_values(snp_fh, ~rb4&tumor_base1, mean_mapQ);
+                    fputc('\t', snp_fh);
+                    print_base_count(snp_fh, ~rb4&tumor_base1, base_occ);
+                    fputc('\t', snp_fh);
+
+                    /* mean {map,base} quality for normal */
+                    mean_quality_values(pl2, n2, rb4|normal_base1, mean_baseQ, mean_mapQ, base_occ);
+                    print_mean_quality_values(snp_fh, rb4, mean_baseQ);
+                    fputc('\t', snp_fh);
+                    print_mean_quality_values(snp_fh, rb4, mean_mapQ);
+                    fputc('\t', snp_fh);
+                    print_base_count(snp_fh, rb4, base_occ);
+                    fputc('\t', snp_fh);
+                    print_mean_quality_values(snp_fh, ~rb4&normal_base1, mean_baseQ);
+                    fputc('\t', snp_fh);
+                    print_mean_quality_values(snp_fh, ~rb4&normal_base1, mean_mapQ);
+                    fputc('\t', snp_fh);
+                    print_base_count(snp_fh, ~rb4&normal_base1, base_occ);
+                    fputc('\n', snp_fh);
+                }
                 fflush(snp_fh);
             }
         }
