@@ -11,6 +11,7 @@ menu:
 module_details:
     name: 'Somatic Sniper'
     icon: res/images/icon_48.png
+    icon_16: res/images/icon_16.png
     pkg_name: somatic-sniper
     exe_name: bam-somaticsniper
 
