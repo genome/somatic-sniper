@@ -162,7 +162,7 @@ File Format
 \end_layout
 
 \begin_layout Standard
-The file output by somatic sniper consists of line for all sites whose consensus
+The file output by SomaticSniper consists of line for all sites whose consensus
  differs from the reference base.
  Each line contains the following tab-separated values:
 \end_layout
