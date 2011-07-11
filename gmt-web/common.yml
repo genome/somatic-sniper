@@ -12,7 +12,8 @@ module_details:
     name: 'SomaticSniper'
     icon: res/images/icon_48.png
     icon_16: res/images/icon_16.png
-    pkg_name: somatic-sniper
+    gmt_pkg_name: somatic-sniper
+    debian_pkg_name: somatic-sniper
     exe_name: bam-somaticsniper
 
 include_version: true
