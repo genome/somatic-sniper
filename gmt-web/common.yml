@@ -15,5 +15,6 @@ module_details:
     pkg_name: somatic-sniper
     exe_name: bam-somaticsniper
 
+include_version: true
 download_link: install.html
 github_url: https://github.com/genome/somatic-sniper
