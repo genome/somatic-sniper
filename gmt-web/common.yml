@@ -16,6 +16,6 @@ module_details:
     debian_pkg_name: somatic-sniper
     exe_name: bam-somaticsniper
 
-include_version: true
+include_suffix: true
 download_link: install.html
 github_url: https://github.com/genome/somatic-sniper
