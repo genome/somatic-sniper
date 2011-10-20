@@ -25,6 +25,13 @@ const static struct {
 };
 const static uint32_t _n_vcf_format_fields = sizeof(_vcf_format_fields)/sizeof(_vcf_format_fields[0]);
 
+/* return the number of alleles encoded in the int 'a',
+ * where A=1, C=2, G=4, T=8
+ */
+static uint32_t count_alleles(uint32_t a) {
+    return (a & 1) + ((a>>1)&1) + ((a>>2)&1) + ((a>>3)&1);
+}
+
 static void output_vcf_int4_masked(FILE *fh, const uint32_t values[4], uint32_t mask) {
     uint32_t i;
     uint32_t c = 0;
@@ -41,14 +48,8 @@ static void output_vcf_int4_masked(FILE *fh, const uint32_t values[4], uint32_t 
 static void output_vcf_gt(FILE *fh, uint32_t ref_base, uint32_t alts, uint32_t gt) {
     uint32_t allele_idx = 0;
     uint32_t out_count = 0;
-    uint32_t allele_count = 0;
+    uint32_t allele_count = count_alleles(gt);
     uint32_t i;
-
-    for (i = 0; i < 4; ++i) {
-        int value = 1 << i;
-        if (gt & value)
-            ++allele_count;
-    }
 
     if (gt & ref_base) {
         if (allele_count == 1) {
