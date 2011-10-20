@@ -15,10 +15,13 @@
 
 static const char *_default_normal_sample_id = "NORMAL";
 static const char *_default_tumor_sample_id = "TUMOR";
+static const char *_default_output_format = "classic";
 
 void usage(const char* progname, pu_data2_t* d) {
     /* we dont like basename(3) */
     const char* pn = strrchr(progname, '/');
+    int i;
+    int n_formats = n_output_formatters();
     if (pn == NULL)
         pn = progname;
     else
@@ -35,7 +38,12 @@ void usage(const char* progname, pu_data2_t* d) {
     fprintf(stderr, "        -T FLOAT  theta in maq consensus calling model (for -c/-g) [%f]\n", d->c->theta);
     fprintf(stderr, "        -N INT    number of haplotypes in the sample (for -c/-g) [%d]\n", d->c->n_hap);
     fprintf(stderr, "        -r FLOAT  prior of a difference between two haplotypes (for -c/-g) [%f]\n", d->c->het_rate);
-    fprintf(stderr, "        -F <fmt>  where fmt is one of vcf or classic to control output type [classic]\n");
+    fprintf(stderr, "        -F <fmt>  where fmt is one of vcf or classic to control output type [%s]\n",
+        _default_output_format);
+    fprintf(stderr, "           Available formats:\n");
+    for (i = 0; i < n_formats; ++i) {
+        fprintf(stderr, "             %s\n", output_formatter_name(i));
+    }
     fprintf(stderr, "\n");
 }
 
@@ -61,9 +69,6 @@ int main(int argc, char *argv[]) {
             default: fprintf(stderr, "Unrecognizd option '-%c'.\n", c); return 1;
         }
     }
-
-    /* this will exit if the format name is invalid */
-    d->output_formatter = get_formatter(output_format);
 
     if (optind == argc) {
         usage(argv[0], d);
@@ -96,6 +101,9 @@ int main(int argc, char *argv[]) {
     d->h2 = bam_header_read(fp2);
     sam_header_parse_rg(d->h2);
     FILE* snp_fh = fopen(argv[optind+2], "w");
+    /* this will exit if the format name is invalid */
+    const output_formatter_t fmt = output_formatter_create(output_format, snp_fh);
+    d->output_formatter = &fmt;
     if(snp_fh) {
         header_data_t hdr;
         hdr.refseq = fn_fa;

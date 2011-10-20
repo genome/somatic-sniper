@@ -1,5 +1,4 @@
-#ifndef __output_format_h__
-#define __output_format_h__
+#pragma once
 
 #include "mean_qualities.h"
 
@@ -42,15 +41,15 @@ typedef void(*output_fn)(FILE*, const sniper_output_t*);
 typedef void(*output_header_fn)(FILE*, const header_data_t*);
 
 typedef struct {
+    FILE *fh;
     output_header_fn header_fn;
     output_fn output_fn;
 } output_formatter_t;
 
-/* available formatters: vcf, classic */
-const output_formatter_t *get_formatter(const char* name);
+uint32_t n_output_formatters();
+const char* output_formatter_name(uint32_t idx);
+const output_formatter_t output_formatter_create(const char* name, FILE* fh);
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* __output_format_h__ */
