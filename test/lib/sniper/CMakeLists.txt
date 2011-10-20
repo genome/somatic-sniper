@@ -4,3 +4,4 @@ set(TEST_LIBS sniper)
 include_directories(${GTEST_INCLUDE_DIRS})
 
 def_test(DqStats dqstats.c)
+def_test(AlleleUtil allele_util.c)

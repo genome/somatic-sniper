@@ -1,5 +1,6 @@
 #pragma once
 
+#include "allele_util.h"
 #include "dqstats.h"
 
 #include <stddef.h>
@@ -8,14 +9,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef enum {
-    WILDTYPE = 0,
-    GERMLINE = 1,
-    SOMATIC  = 2,
-    LOH      = 3,
-    UNKNOWN  = 4
-} variant_status_t;
 
 typedef struct {
     int genotype;

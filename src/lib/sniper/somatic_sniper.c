@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include "allele_util.h"
 #include "dqstats.h"
 #include "output_format.h"
 #include "somatic_sniper.h"
@@ -22,6 +23,7 @@ int32_t bam_get_tid(const bam_header_t *header, const char *seq_name);
 int isHom[16] = {0,1,1,0,1,0,0,0,1,0,0,0,0,0,0,0} ;
 int isHet[16] = {0,0,0,1,0,1,1,0,0,1,1,0,1,0,0,0} ;
 int glfBase[10] = { 1, 3, 5, 9, 2, 6, 10, 4, 12, 8 } ; /* mapping from 10 genotypes to 4 bit base coding */
+
 
 void makeSoloPrior (void) {
     int i, b, ref ;
@@ -144,14 +146,28 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                 out.tumor.consensus_quality = tumor_score1;
                 out.tumor.variant_allele_quality = tumor_snp_q;
                 out.tumor.somatic_score = qPosteriorSum;
-                out.tumor.variant_status = qPosteriorSum > 0 ? SOMATIC : UNKNOWN;
+
+                if (rb4 == tumor_base1 && tumor_base1 == normal_base1)
+                    out.tumor.variant_status = WILDTYPE;
+                if (tumor_base1 == normal_base1)
+                    out.tumor.variant_status = GERMLINE;
+                else if (is_loh(tumor_base1, normal_base1))
+                    out.tumor.variant_status = LOH;
+                else if (qPosteriorSum > 0)
+                    out.tumor.variant_status = SOMATIC;
+                else
+                    out.tumor.variant_status = UNKNOWN;
+
                 get_dqstats(pl1, n1, rb4, rb4|tumor_base1, &out.tumor.dqstats);
 
                 out.normal.genotype = normal_base1;
                 out.normal.consensus_quality = normal_score1;
                 out.normal.variant_allele_quality = normal_snp_q;
                 out.normal.somatic_score = -1;
-                out.normal.variant_status = UNKNOWN;
+                if (out.normal.genotype == rb4) 
+                    out.normal.variant_status = WILDTYPE;
+                else
+                    out.normal.variant_status = GERMLINE;
                 get_dqstats(pl2, n2, rb4, rb4|normal_base1, &out.normal.dqstats);
 
                 d->output_formatter->output_fn(snp_fh, &out);

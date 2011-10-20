@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 
 set(SOURCES
+    allele_util.c
+    allele_util.h
     dqstats.c
     dqstats.h
     output_bed.c

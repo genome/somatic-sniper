@@ -1,4 +1,5 @@
 #include "output_vcf.h"
+#include "allele_util.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -24,13 +25,6 @@ const static struct {
     { "SSC", "1", "Integer", "Somatic Score" },
 };
 const static uint32_t _n_vcf_format_fields = sizeof(_vcf_format_fields)/sizeof(_vcf_format_fields[0]);
-
-/* return the number of alleles encoded in the int 'a',
- * where A=1, C=2, G=4, T=8
- */
-static uint32_t count_alleles(uint32_t a) {
-    return (a & 1) + ((a>>1)&1) + ((a>>2)&1) + ((a>>3)&1);
-}
 
 static void output_vcf_int4_masked(FILE *fh, const uint32_t values[4], uint32_t mask) {
     uint32_t i;
