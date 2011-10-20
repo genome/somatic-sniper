@@ -38,8 +38,6 @@ void output_classic(FILE *fh, const sniper_output_t *p) {
     fputc('\t', fh);
     print_base_count(fh, ~p->ref_base4 & p->tumor.genotype, p->tumor.dqstats.base_occ);
     fputc('\t', fh);
-    print_dp4(fh, p->tumor.dqstats.dp4);
-    fputc('\t', fh);
 
     /* mean {map,base} quality for normal */
     print_mean_quality_values(fh, p->ref_base4, p->normal.dqstats.mean_baseQ);
@@ -53,7 +51,5 @@ void output_classic(FILE *fh, const sniper_output_t *p) {
     print_mean_quality_values(fh, ~p->ref_base4&p->normal.genotype, p->normal.dqstats.mean_mapQ);
     fputc('\t', fh);
     print_base_count(fh, ~p->ref_base4&p->normal.genotype, p->normal.dqstats.base_occ);
-    fputc('\t', fh);
-    print_dp4(fh, p->normal.dqstats.dp4);
     fputc('\n', fh);
 }
