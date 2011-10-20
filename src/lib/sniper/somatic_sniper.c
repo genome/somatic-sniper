@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include "mean_qualities.h"
+#include "dqstats.h"
 #include "output_format.h"
 #include "somatic_sniper.h"
 

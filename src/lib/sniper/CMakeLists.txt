@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 
 set(SOURCES
-    mean_qualities.c
-    mean_qualities.h
+    dqstats.c
+    dqstats.h
     output_bed.c
     output_bed.h
     output_classic.c

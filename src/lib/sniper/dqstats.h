@@ -1,5 +1,6 @@
-#ifndef __mean_qualities_h__
-#define __mean_qualities_h__
+#pragma once
+
+/* per-site depth and quality statistics */
 
 #include <bam.h>
 #include <stdint.h>
@@ -42,5 +43,3 @@ void print_dp4(FILE* fh, const uint32_t dp4[4]);
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* __mean_qualities_h__ */

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mean_qualities.h"
+#include "dqstats.h"
 
 #include <stddef.h>
 #include <stdio.h>

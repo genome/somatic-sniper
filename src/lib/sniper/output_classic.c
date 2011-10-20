@@ -1,6 +1,6 @@
 #include "output_classic.h"
 
-#include "mean_qualities.h"
+#include "dqstats.h"
 #include <stdio.h>
 
 void output_classic_header(FILE* fh, const header_data_t* h) {

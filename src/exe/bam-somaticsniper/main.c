@@ -2,7 +2,6 @@
 #include "khash.h"
 #include "kstring.h"
 #include "sam.h"
-#include "sniper/mean_qualities.h"
 #include "sniper/sniper_maqcns.h"
 #include "sniper/somatic_sniper.h"
 #include "sniper/output_format.h"

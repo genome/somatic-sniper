@@ -1,4 +1,4 @@
-#include "mean_qualities.h"
+#include "dqstats.h"
 
 #include <bam.h>
 #include <assert.h>
