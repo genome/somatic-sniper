@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 void output_bed_header(FILE* fh, const header_data_t* h) {
+    fprintf(fh, "#CHROM\tSTART\tSTOP\tREF/ALT\tSOMATIC_SCORE\tTUMOR_DEPTH\n");
 }
 
 void output_bed(FILE *fh, const sniper_output_t *p) {
