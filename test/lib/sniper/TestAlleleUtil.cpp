@@ -6,12 +6,6 @@
 
 using namespace std;
 
-// NOTE: // alleles are represented in 4 bits, where
-// 1 = A
-// 2 = C
-// 4 = G
-// 8 = T
-
 namespace {
     enum Allele {
         A = 1,
@@ -54,7 +48,7 @@ TEST(AlleleUtil, is_loh) {
     }
 
     // these are all the possible ways that LOH can happen with 2/3 alleles
-    // (we do not concern ourselves with N)
+    // (we do not concern ourselves with N until later)
     vector< pair<int,int> > loh_pairs;
     loh_pairs.push_back(mkpair(A, A|C));
     loh_pairs.push_back(mkpair(C, A|C));
