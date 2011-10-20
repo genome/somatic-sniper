@@ -5,12 +5,16 @@
 #include "sniper/mean_qualities.h"
 #include "sniper/sniper_maqcns.h"
 #include "sniper/somatic_sniper.h"
+#include "sniper/output_format.h"
 
 #include <bam.h>
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 #include <unistd.h>
+
+static const char *_default_normal_sample_id = "NORMAL";
+static const char *_default_tumor_sample_id = "TUMOR";
 
 void usage(const char* progname, pu_data2_t* d) {
     /* we dont like basename(3) */
@@ -30,34 +34,40 @@ void usage(const char* progname, pu_data2_t* d) {
     fprintf(stderr, "        -p FLAG   disable priors in the somatic calculation. Increases sensitivity for solid tumors\n");
     fprintf(stderr, "        -T FLOAT  theta in maq consensus calling model (for -c/-g) [%f]\n", d->c->theta);
     fprintf(stderr, "        -N INT    number of haplotypes in the sample (for -c/-g) [%d]\n", d->c->n_hap);
-
     fprintf(stderr, "        -r FLOAT  prior of a difference between two haplotypes (for -c/-g) [%f]\n", d->c->het_rate);
+    fprintf(stderr, "        -F <fmt>  where fmt is one of vcf or classic to control output type [classic]\n");
     fprintf(stderr, "\n");
 }
 
 int main(int argc, char *argv[]) {
     int c;
-    char *fn_fa = 0;
+    const char *fn_fa = 0;
     pu_data2_t *d = (pu_data2_t*)calloc(1, sizeof(pu_data2_t));
     d->min_somatic_qual=0;
     d->tid = -1; d->mask = BAM_DEF_MASK; d->mapQ = 0;
     d->c = sniper_maqcns_init();
     int use_priors = 1;
-    while ((c = getopt(argc, argv, "f:T:N:r:I:G:q:Q:p")) >= 0) {
+    const char *output_format = "classic";
+    while ((c = getopt(argc, argv, "f:T:N:r:I:G:q:Q:F:p")) >= 0) {
         switch (c) {
-            case 'f': fn_fa = strdup(optarg); break;
+            case 'f': fn_fa = optarg; break;
             case 'T': d->c->theta = atof(optarg); break;
             case 'N': d->c->n_hap = atoi(optarg); break;
-            case 'r': d->c->het_rate = atoi(optarg); break;
+            case 'r': d->c->het_rate = atof(optarg); break;
             case 'q': d->mapQ = atoi(optarg); break;
             case 'Q': d->min_somatic_qual = atoi(optarg); break;
+            case 'F': output_format = optarg; break;
             case 'p': use_priors = 0; break;
             default: fprintf(stderr, "Unrecognizd option '-%c'.\n", c); return 1;
         }
     }
+
+    /* this will exit if the format name is invalid */
+    d->output_formatter = get_formatter(output_format);
+
     if (optind == argc) {
         usage(argv[0], d);
-        free(fn_fa); sniper_maqcns_destroy(d->c); free(d);
+        sniper_maqcns_destroy(d->c); free(d);
         return 1;
     }
     if (fn_fa) {
@@ -69,7 +79,6 @@ int main(int argc, char *argv[]) {
         free(d);
         exit(1);
     }
-    free(fn_fa);
     sniper_maqcns_prepare(d->c);
     fprintf(stderr,"Preparing to snipe some somatics\n");
     if(use_priors) {
@@ -88,6 +97,11 @@ int main(int argc, char *argv[]) {
     sam_header_parse_rg(d->h2);
     FILE* snp_fh = fopen(argv[optind+2], "w");
     if(snp_fh) {
+        header_data_t hdr;
+        hdr.refseq = fn_fa;
+        hdr.normal_sample_id = _default_normal_sample_id;
+        hdr.tumor_sample_id = _default_tumor_sample_id;
+        d->output_formatter->header_fn(snp_fh, &hdr);
         bam_sspileup_file(fp1, fp2, d->mask, d->mapQ, glf_somatic, d, snp_fh);
     }
     else {

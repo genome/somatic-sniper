@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 2.8)
 set(SOURCES
     mean_qualities.c
     mean_qualities.h
+    output_format.c
+    output_format.h
     sniper_maqcns.c
     sniper_maqcns.h
     sniper_pileup.c

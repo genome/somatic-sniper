@@ -3,8 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include "somatic_sniper.h"
 #include "mean_qualities.h"
+#include "output_format.h"
+#include "somatic_sniper.h"
 
 int get_next_pos(bam_plbuf_t *buf,bamFile fp);
 
@@ -98,13 +99,17 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
         int tumor_base2 = tumor_cns >> 24 & 0xf;
         int tumor_score1 = tumor_cns >> 8 & 0xff;
         int tumor_score2 = tumor_cns & 0xff;
+/*
         int tumor_rms_mapping = tumor_cns >> 16 & 0xff;
+*/
 
         int normal_base1 = normal_cns >> 28;
         int normal_base2 = normal_cns >> 24 & 0xf;
         int normal_score1 = normal_cns >> 8 & 0xff;
         int normal_score2 = normal_cns & 0xff;
+/*
         int normal_rms_mapping = normal_cns >> 16 & 0xff;
+*/
 
         int tumor_snp_q = 0;
         int normal_snp_q = 0;
@@ -129,60 +134,27 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
             }
 
             if(d->min_somatic_qual <= qPosteriorSum) {
-                uint32_t mean_baseQ[4] = {0};
-                uint32_t mean_mapQ[4] = {0};
-                uint32_t base_occ[4] = {0};
-                dp4_t dp4;
-                fprintf(snp_fh, "%s\t%d\t%c\t%c\t%c\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t",
-                    d->h1->target_name[tid],
-                    pos + 1,
-                    rb,
-                    bam_nt16_rev_table[tumor_base1],
-                    bam_nt16_rev_table[normal_base1],
-                    qPosteriorSum,
-                    tumor_score1,
-                    tumor_snp_q,
-                    tumor_rms_mapping,
-                    normal_score1,
-                    normal_snp_q,
-                    normal_rms_mapping,
-                    n1,
-                    n2);
+                sniper_output_t out;
+                out.seq_name = d->h1->target_name[tid];
+                out.pos = pos;
+                out.ref_base = rb;
+                out.ref_base4 = rb4;
 
-                /* mean {map,base} quality for tumor */
-                mean_quality_values(pl1, n1, rb4, rb4|tumor_base1, mean_baseQ, mean_mapQ, base_occ, &dp4);
-                print_mean_quality_values(snp_fh, rb4, mean_baseQ);
-                fputc('\t', snp_fh);
-                print_mean_quality_values(snp_fh, rb4, mean_mapQ);
-                fputc('\t', snp_fh);
-                print_base_count(snp_fh, rb4, base_occ);
-                fputc('\t', snp_fh);
-                print_mean_quality_values(snp_fh, ~rb4&tumor_base1, mean_baseQ);
-                fputc('\t', snp_fh);
-                print_mean_quality_values(snp_fh, ~rb4&tumor_base1, mean_mapQ);
-                fputc('\t', snp_fh);
-                print_base_count(snp_fh, ~rb4&tumor_base1, base_occ);
-                fputc('\t', snp_fh);
-                print_dp4(snp_fh, &dp4);
-                fputc('\t', snp_fh);
+                out.tumor.genotype = tumor_base1;
+                out.tumor.consensus_quality = tumor_score1;
+                out.tumor.variant_allele_quality = tumor_snp_q;
+                out.tumor.somatic_score = qPosteriorSum;
+                out.tumor.is_somatic = qPosteriorSum > 0 ? 1 : 0;
+                get_dqstats(pl1, n1, rb4, rb4|tumor_base1, &out.tumor.dqstats);
 
-                /* mean {map,base} quality for normal */
-                mean_quality_values(pl2, n2, rb4, rb4|normal_base1, mean_baseQ, mean_mapQ, base_occ, &dp4);
-                print_mean_quality_values(snp_fh, rb4, mean_baseQ);
-                fputc('\t', snp_fh);
-                print_mean_quality_values(snp_fh, rb4, mean_mapQ);
-                fputc('\t', snp_fh);
-                print_base_count(snp_fh, rb4, base_occ);
-                fputc('\t', snp_fh);
-                print_mean_quality_values(snp_fh, ~rb4&normal_base1, mean_baseQ);
-                fputc('\t', snp_fh);
-                print_mean_quality_values(snp_fh, ~rb4&normal_base1, mean_mapQ);
-                fputc('\t', snp_fh);
-                print_base_count(snp_fh, ~rb4&normal_base1, base_occ);
-                fputc('\t', snp_fh);
-                print_dp4(snp_fh, &dp4);
-                fputc('\n', snp_fh);
+                out.normal.genotype = normal_base1;
+                out.normal.consensus_quality = normal_score1;
+                out.normal.variant_allele_quality = normal_snp_q;
+                out.normal.somatic_score = -1;
+                out.normal.is_somatic = 0;
+                get_dqstats(pl2, n2, rb4, rb4|normal_base1, &out.normal.dqstats);
 
+                d->output_formatter->output_fn(snp_fh, &out);
                 fflush(snp_fh);
             }
         }
