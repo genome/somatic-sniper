@@ -170,7 +170,7 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                     out.normal.variant_status = GERMLINE;
                 get_dqstats(pl2, n2, rb4, rb4|normal_base1, &out.normal.dqstats);
 
-                d->output_formatter->output_fn(snp_fh, &out);
+                output_formatter_write(d->output_formatter, &out);
                 fflush(snp_fh);
             }
         }

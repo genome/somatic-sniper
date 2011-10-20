@@ -45,11 +45,13 @@ typedef struct {
     FILE *fh;
     output_header_fn header_fn;
     output_fn output_fn;
+    void *data; /* instance specific data */
 } output_formatter_t;
 
 uint32_t n_output_formatters();
 const char* output_formatter_name(uint32_t idx);
 output_formatter_t output_formatter_create(const char* name, FILE* fh);
+void output_formatter_write(const output_formatter_t *formatter, const sniper_output_t *p);
 
 #ifdef __cplusplus
 }

@@ -21,7 +21,7 @@ output_formatter_t output_formatter_create(const char* name, FILE* fh) {
     uint32_t i;
     for (i = 0; i < _n_formats; ++i) {
         if (strcmp(name, _formats[i].name) == 0) {
-            output_formatter_t rv;
+            output_formatter_t rv = {0};
             rv.fh = fh;
             rv.header_fn = _formats[i].header_fn;
             rv.output_fn = _formats[i].output_fn;
