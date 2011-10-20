@@ -17,7 +17,7 @@ const static struct {
 };
 const static uint32_t _n_formats = sizeof(_formats)/sizeof(_formats[0]);
 
-const output_formatter_t output_formatter_create(const char* name, FILE* fh) {
+output_formatter_t output_formatter_create(const char* name, FILE* fh) {
     uint32_t i;
     for (i = 0; i < _n_formats; ++i) {
         if (strcmp(name, _formats[i].name) == 0) {

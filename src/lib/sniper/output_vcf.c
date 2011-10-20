@@ -25,15 +25,6 @@ const static struct {
 };
 const static uint32_t _n_vcf_format_fields = sizeof(_vcf_format_fields)/sizeof(_vcf_format_fields[0]);
 
-static void output_vcf_intN(FILE *fh, const uint32_t *values, uint32_t n) {
-    int i;
-    for (i = 0; i < n; ++i) {
-        if (i > 0)
-            fputc(',', fh);
-        fprintf(fh, "%d", values[i]);
-    }
-}
-
 static void output_vcf_int4_masked(FILE *fh, const uint32_t values[4], uint32_t mask) {
     uint32_t i;
     uint32_t c = 0;
@@ -92,14 +83,16 @@ void output_vcf_sample(FILE *fh, int ref_base4, int alts, const sample_data_t *s
     /* GT */
     output_vcf_gt(fh, ref_base4, alts, s->genotype);
 
-    /* DP */
-    fprintf(fh, ":%d:", s->dqstats.total_depth);
-
-    /* DP4 */
-    output_vcf_intN(fh, s->dqstats.dp4, 4);
-
-    /* GQ, VAQ */
-    fprintf(fh, ":%d:%d:", s->consensus_quality, s->variant_allele_quality);
+    /* DP, DP4, GQ, VAQ */
+    fprintf(fh, ":%d:%d,%d,%d,%d:%d:%d:",
+        s->dqstats.total_depth,
+        s->dqstats.dp4[0],
+        s->dqstats.dp4[1],
+        s->dqstats.dp4[2],
+        s->dqstats.dp4[3], 
+        s->consensus_quality,
+        s->variant_allele_quality
+        );
 
     /* BQ, MQ */
     output_vcf_int4_masked(fh, s->dqstats.mean_baseQ, s->genotype);
@@ -108,8 +101,7 @@ void output_vcf_sample(FILE *fh, int ref_base4, int alts, const sample_data_t *s
     fputc(':', fh);
 
     /* SS */
-    fputc(s->is_somatic ? '2' : '.', fh);
-    fputc(':', fh);
+    fprintf(fh, "%d:", s->variant_status);
 
     /* SSC */
     if (s->somatic_score >= 0) {

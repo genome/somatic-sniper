@@ -144,14 +144,14 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                 out.tumor.consensus_quality = tumor_score1;
                 out.tumor.variant_allele_quality = tumor_snp_q;
                 out.tumor.somatic_score = qPosteriorSum;
-                out.tumor.is_somatic = qPosteriorSum > 0 ? 1 : 0;
+                out.tumor.variant_status = qPosteriorSum > 0 ? SOMATIC : UNKNOWN;
                 get_dqstats(pl1, n1, rb4, rb4|tumor_base1, &out.tumor.dqstats);
 
                 out.normal.genotype = normal_base1;
                 out.normal.consensus_quality = normal_score1;
                 out.normal.variant_allele_quality = normal_snp_q;
                 out.normal.somatic_score = -1;
-                out.normal.is_somatic = 0;
+                out.normal.variant_status = UNKNOWN;
                 get_dqstats(pl2, n2, rb4, rb4|normal_base1, &out.normal.dqstats);
 
                 d->output_formatter->output_fn(snp_fh, &out);

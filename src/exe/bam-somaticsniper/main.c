@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
     sam_header_parse_rg(d->h2);
     FILE* snp_fh = fopen(argv[optind+2], "w");
     /* this will exit if the format name is invalid */
-    const output_formatter_t fmt = output_formatter_create(output_format, snp_fh);
+    output_formatter_t fmt = output_formatter_create(output_format, snp_fh);
     d->output_formatter = &fmt;
     if(snp_fh) {
         header_data_t hdr;
