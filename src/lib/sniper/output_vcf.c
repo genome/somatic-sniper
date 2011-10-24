@@ -150,6 +150,7 @@ void output_vcf_header(FILE *fh, const header_data_t *h) {
     strftime(filedate, sizeof(filedate), "%Y%m%d", localtime(&now));
     fprintf(fh, "##fileformat=VCFv4.1\n");
     fprintf(fh, "##fileDate=%s\n", filedate);
+    fprintf(fh, "##phasing=none\n");
     fprintf(fh, "##reference=file://%s\n", h->refseq);
     for (i = 0; i < _n_vcf_format_fields; ++i) {
         fprintf(fh, "##FORMAT=<ID=%s,Number=%s,Type=%s,Description=\"%s\">\n",
