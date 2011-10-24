@@ -13,9 +13,6 @@
 #define expPhred(x) (double)exp((double)(-(x))/PHRED_CONST)
 #define logPhred(x) (int)((x) < 1 ? (0.5-PHRED_CONST*log(x)) : (-0.5-PHRED_CONST*log(x)))
 
-#define FORMAT_SIMPLE 1 //simple file format output for backwards compatibility 
-#define FORMAT_EXTENDED 2 //extended file format output
-
 #ifdef __cplusplus
 extern "C" {
 #endif
