@@ -57,7 +57,7 @@ void make_joint_prior (double somatic_rate) {
                 germline_prior = logPhred(THETA) ;
             else if (isHom[b])
                 germline_prior = logPhred(0.5*THETA) ;
-            else			
+            else
                 germline_prior = logPhred(THETA*THETA) ;
             for(j = 0; j < 10; ++j) {
                 c =glfBase[j];
@@ -196,20 +196,6 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                 out.pos = pos;
                 out.ref_base = rb;
                 out.ref_base4 = rb4;
-                            d->h1->target_name[tid],
-                            pos + 1,
-                            rb,
-                            bam_nt16_rev_table[tumor_base1],
-                            qPosteriorSum,
-                            tumor_score1,
-                            tumor_snp_q,
-                            tumor_rms_mapping,
-                            n1,
-                            n2);
-
-                }
-                else {
-
 
                 out.tumor.genotype = tumor_base1;
                 out.tumor.consensus_quality = tumor_score1;
@@ -226,7 +212,7 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                     out.tumor.variant_status = SOMATIC;
                 else
                     out.tumor.variant_status = UNKNOWN;
-                }
+
                 get_dqstats(pl1, n1, rb4, rb4|tumor_base1, &out.tumor.dqstats);
 
                 out.normal.genotype = normal_base1;

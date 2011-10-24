@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
     d->somatic_mutation_rate = 0.000001;
     const char *output_format = "classic";
 
-    while ((c = getopt(argc, argv, "f:T:N:r:I:G:q:Q:pJs:S")) >= 0) {
+    while ((c = getopt(argc, argv, "f:T:N:r:I:G:q:Q:pJs:F:")) >= 0) {
         switch (c) {
             case 'f': fn_fa = optarg; break;
             case 'T': d->c->theta = atof(optarg); break;
