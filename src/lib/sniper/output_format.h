@@ -12,6 +12,8 @@ extern "C" {
 
 typedef struct {
     int genotype;
+    int joint_genotype;
+    int joint_consensus_quality;
     int consensus_quality;
     int variant_allele_quality;
     int mean_mapping_quality;

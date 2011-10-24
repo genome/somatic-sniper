@@ -149,6 +149,9 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
         int tumor_snp_q = 0;
         int normal_snp_q = 0;
 
+        int max_jointlk_normal = 0;
+        int max_jointlk_tumor = 0;
+
         if (rb4 != 15 && tumor_base1 != 15 && tumor_base1 != rb4) { // a SNP
             tumor_snp_q = (tumor_base2 == rb4)? tumor_score1 : tumor_score1 + tumor_score2;
             if (tumor_snp_q > 255) tumor_snp_q = 255;
@@ -167,6 +170,9 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                 //here we will use more somatic prior probabilities and calculate the marginals in place
                 int joint_lk[10][10] ;
                 int marginal_probability = 255;
+                int max_jointlk_normal_index = -1;
+                int max_jointlk_tumor_index = -1;
+                int max_jointlk = 1000;
                 int i,j;
                 for(i = 0; i < 10; i++) {
                     for(j = 0; j < 10; j++) {
@@ -174,9 +180,17 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                         if(joint_lk[i][j] > 255) {
                             joint_lk[i][j] = 255;
                         }
+                        if(joint_lk[i][j] < max_jointlk) {
+                            max_jointlk = joint_lk[i][j];
+                            max_jointlk_normal_index = i;
+                            max_jointlk_tumor_index = j;
+                        }
                         marginal_probability = qAdd(marginal_probability,joint_lk[i][j]);
                     }
                 }
+                //set the argmax values for the joint genotype
+                max_jointlk_normal = glfBase[max_jointlk_normal_index];
+                max_jointlk_tumor = glfBase[max_jointlk_tumor_index];
                 
                 for(j = 0; j < 10; j++) {
                     int lk = joint_lk[j][j] - marginal_probability;
@@ -196,6 +210,8 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                 out.pos = pos;
                 out.ref_base = rb;
                 out.ref_base4 = rb4;
+            }
+            else {
 
                 out.tumor.genotype = tumor_base1;
                 out.tumor.consensus_quality = tumor_score1;
@@ -213,6 +229,7 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                 else
                     out.tumor.variant_status = UNKNOWN;
 
+                }
                 get_dqstats(pl1, n1, rb4, rb4|tumor_base1, &out.tumor.dqstats);
 
                 out.normal.genotype = normal_base1;
