@@ -1,37 +1,8 @@
-h2. Download (Ubuntu 8.04+)
-==<hr />==
+{% assign ubuntu_versions = "Ubuntu 8.04+" %}
+{% include install/download.html %}
 
-p. To install the the base system, run this in a terminal:
+{% include install/github.html %}
 
-p(terminal). ==wget -q -O - http://apt.genome.wustl.edu/ubuntu/files/install.sh | sudo bash==
-
-p. To install {{ page.module_details.name }}, run:
-
-p(terminal). ==genome install {{ page.module_details.pkg_name }}{{ page.version_suffix }}==
-
-h3. Behind the Scenes:
-
-p. Genome Modeling System uses the native apt package manager, and links to an apt repository served from apt.genome.wustl.edu for systematic updates.
-
-p. repository linkage:
-
-p(terminal). ==sudo apt-add-respository "deb http://apt.genome.wustl.edu lucid-genome main"==
-==wget http://apt.genome.wustl.edu/ubuntu/files/genome-center.asc | sudo apt-key add==
-==sudo apt-get update==
-
-p. install {{ page.module_details.name }}:
-
-p(terminal). ==sudo apt-get install {{ page.module_details.pkg_name }}{{ page.version_suffix }}==
-
-h2. Other Platforms/source code:
-==<hr />==
-
-p. The full source code and build instructions are available from the "github project page":http://github.com/genome/{{ page.module_details.pkg_name }}.
-
-h2. Help:
-==<hr />==
-
-p. To get help on {{ page.name }}, simply run the command with no options:
-
-p(terminal). =={{ page.module_details.exe_name }}==
-
+{% capture help_text %}To get help on {{ page.module_details.name }}, simply run the command with no options:{% endcapture %}
+{% capture help_command %}{{ page.module_details.exe_name }}{% endcapture %}
+{% include install/help.html %}

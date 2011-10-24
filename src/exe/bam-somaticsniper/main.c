@@ -2,9 +2,9 @@
 #include "khash.h"
 #include "kstring.h"
 #include "sam.h"
-#include "sniper/mean_qualities.h"
 #include "sniper/sniper_maqcns.h"
 #include "sniper/somatic_sniper.h"
+#include "sniper/output_format.h"
 
 #include <bam.h>
 #include <ctype.h>
@@ -12,9 +12,15 @@
 #include <stdio.h>
 #include <unistd.h>
 
+static const char *_default_normal_sample_id = "NORMAL";
+static const char *_default_tumor_sample_id = "TUMOR";
+static const char *_default_output_format = "classic";
+
 void usage(const char* progname, pu_data2_t* d) {
     /* we dont like basename(3) */
     const char* pn = strrchr(progname, '/');
+    int i;
+    int n_formats = n_output_formatters();
     if (pn == NULL)
         pn = progname;
     else
@@ -33,14 +39,19 @@ void usage(const char* progname, pu_data2_t* d) {
     fprintf(stderr, "        -S FLAG   output in simple original format\n");
     fprintf(stderr, "        -T FLOAT  theta in maq consensus calling model (for -c/-g) [%f]\n", d->c->theta);
     fprintf(stderr, "        -N INT    number of haplotypes in the sample (for -c/-g) [%d]\n", d->c->n_hap);
-
     fprintf(stderr, "        -r FLOAT  prior of a difference between two haplotypes (for -c/-g) [%f]\n", d->c->het_rate);
+    fprintf(stderr, "        -F <fmt>  where fmt is one of vcf or classic to control output type [%s]\n",
+        _default_output_format);
+    fprintf(stderr, "           Available formats:\n");
+    for (i = 0; i < n_formats; ++i) {
+        fprintf(stderr, "             %s\n", output_formatter_name(i));
+    }
     fprintf(stderr, "\n");
 }
 
 int main(int argc, char *argv[]) {
     int c;
-    char *fn_fa = 0;
+    const char *fn_fa = 0;
     pu_data2_t *d = (pu_data2_t*)calloc(1, sizeof(pu_data2_t));
     d->min_somatic_qual=0;
     d->tid = -1; d->mask = BAM_DEF_MASK; d->mapQ = 0;
@@ -48,25 +59,27 @@ int main(int argc, char *argv[]) {
     int use_priors = 1;
     d->use_joint_priors = 0;
     d->somatic_mutation_rate = 0.000001;
-    d->format = FORMAT_EXTENDED;
+    const char *output_format = "classic";
+
     while ((c = getopt(argc, argv, "f:T:N:r:I:G:q:Q:pJs:S")) >= 0) {
         switch (c) {
-            case 'f': fn_fa = strdup(optarg); break;
+            case 'f': fn_fa = optarg; break;
             case 'T': d->c->theta = atof(optarg); break;
             case 'N': d->c->n_hap = atoi(optarg); break;
-            case 'r': d->c->het_rate = atoi(optarg); break;
+            case 'r': d->c->het_rate = atof(optarg); break;
             case 'q': d->mapQ = atoi(optarg); break;
             case 'Q': d->min_somatic_qual = atoi(optarg); break;
+            case 'F': output_format = optarg; break;
             case 'p': use_priors = 0; break;
             case 'J': d->use_joint_priors = 1; break;
-            case 's': d->somatic_mutation_rate = atof(optarg); d->use_joint_priors = 1; break;         
-            case 'S': d->format = FORMAT_SIMPLE; break;         
+            case 's': d->somatic_mutation_rate = atof(optarg); d->use_joint_priors = 1; break;                  
             default: fprintf(stderr, "Unrecognizd option '-%c'.\n", c); return 1;
         }
     }
+
     if (optind == argc) {
         usage(argv[0], d);
-        free(fn_fa); sniper_maqcns_destroy(d->c); free(d);
+        sniper_maqcns_destroy(d->c); free(d);
         return 1;
     }
     if (fn_fa) {
@@ -83,7 +96,6 @@ int main(int argc, char *argv[]) {
         make_joint_prior(d->somatic_mutation_rate);
     }
  
-    free(fn_fa);
     sniper_maqcns_prepare(d->c);
     fprintf(stderr,"Preparing to snipe some somatics\n");
     if(use_priors) {
@@ -101,7 +113,15 @@ int main(int argc, char *argv[]) {
     d->h2 = bam_header_read(fp2);
     sam_header_parse_rg(d->h2);
     FILE* snp_fh = fopen(argv[optind+2], "w");
+    /* this will exit if the format name is invalid */
+    output_formatter_t fmt = output_formatter_create(output_format, snp_fh);
+    d->output_formatter = &fmt;
     if(snp_fh) {
+        header_data_t hdr;
+        hdr.refseq = fn_fa;
+        hdr.normal_sample_id = _default_normal_sample_id;
+        hdr.tumor_sample_id = _default_tumor_sample_id;
+        d->output_formatter->header_fn(snp_fh, &hdr);
         bam_sspileup_file(fp1, fp2, d->mask, d->mapQ, glf_somatic, d, snp_fh);
     }
     else {

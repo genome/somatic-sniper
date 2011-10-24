@@ -2,6 +2,7 @@
 #define SOMATIC_SNIPER
 
 #include "sniper_maqcns.h"
+#include "output_format.h"
 
 #include "sam.h"
 #include "kstring.h"
@@ -29,9 +30,11 @@ typedef struct {
     int tid, len, last_pos;
     int mask;
     int mapQ;
-    int min_somatic_qual;//for limiting snp calls in somatic sniper
+    int min_somatic_qual; //for limiting snp calls in somatic sniper
     char *ref;
     glfFile fp; // for glf output only
+    const output_formatter_t *output_formatter; // vcf or classic
+    
     //for alternative prior construction
     int use_joint_priors;
     double somatic_mutation_rate;

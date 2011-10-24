@@ -3,8 +3,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include "allele_util.h"
+#include "dqstats.h"
+#include "output_format.h"
 #include "somatic_sniper.h"
-#include "mean_qualities.h"
 
 int get_next_pos(bam_plbuf_t *buf,bamFile fp);
 
@@ -22,6 +24,7 @@ int32_t bam_get_tid(const bam_header_t *header, const char *seq_name);
 int isHom[16] = {0,1,1,0,1,0,0,0,1,0,0,0,0,0,0,0} ;
 int isHet[16] = {0,0,0,1,0,1,1,0,0,1,1,0,1,0,0,0} ;
 int glfBase[10] = { 1, 3, 5, 9, 2, 6, 10, 4, 12, 8 } ; /* mapping from 10 genotypes to 4 bit base coding */
+
 
 void makeSoloPrior (void) {
     int i, b, ref ;
@@ -131,13 +134,17 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
         int tumor_base2 = tumor_cns >> 24 & 0xf;
         int tumor_score1 = tumor_cns >> 8 & 0xff;
         int tumor_score2 = tumor_cns & 0xff;
+/*
         int tumor_rms_mapping = tumor_cns >> 16 & 0xff;
+*/
 
         int normal_base1 = normal_cns >> 28;
         int normal_base2 = normal_cns >> 24 & 0xf;
         int normal_score1 = normal_cns >> 8 & 0xff;
         int normal_score2 = normal_cns & 0xff;
+/*
         int normal_rms_mapping = normal_cns >> 16 & 0xff;
+*/
 
         int tumor_snp_q = 0;
         int normal_snp_q = 0;
@@ -184,11 +191,11 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
             }
 
             if(d->min_somatic_qual <= qPosteriorSum) {
-                uint32_t mean_baseQ[4] = {0};
-                uint32_t mean_mapQ[4] = {0};
-                uint32_t base_occ[4] = {0};
-                if(d->format == FORMAT_SIMPLE) {
-                    fprintf(snp_fh, "%s\t%d\t%c\t%c\t%d\t%d\t%d\t%d\t%d\t%d\n",
+                sniper_output_t out;
+                out.seq_name = d->h1->target_name[tid];
+                out.pos = pos;
+                out.ref_base = rb;
+                out.ref_base4 = rb4;
                             d->h1->target_name[tid],
                             pos + 1,
                             rb,
@@ -203,52 +210,36 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                 }
                 else {
 
-                    fprintf(snp_fh, "%s\t%d\t%c\t%c\t%c\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t",
-                            d->h1->target_name[tid],
-                            pos + 1,
-                            rb,
-                            bam_nt16_rev_table[tumor_base1],
-                            bam_nt16_rev_table[normal_base1],
-                            qPosteriorSum,
-                            tumor_score1,
-                            tumor_snp_q,
-                            tumor_rms_mapping,
-                            normal_score1,
-                            normal_snp_q,
-                            normal_rms_mapping,
-                            n1,
-                            n2);
 
-                    /* mean {map,base} quality for tumor */
-                    mean_quality_values(pl1, n1, rb4|tumor_base1, mean_baseQ, mean_mapQ, base_occ);
-                    print_mean_quality_values(snp_fh, rb4, mean_baseQ);
-                    fputc('\t', snp_fh);
-                    print_mean_quality_values(snp_fh, rb4, mean_mapQ);
-                    fputc('\t', snp_fh);
-                    print_base_count(snp_fh, rb4, base_occ);
-                    fputc('\t', snp_fh);
-                    print_mean_quality_values(snp_fh, ~rb4&tumor_base1, mean_baseQ);
-                    fputc('\t', snp_fh);
-                    print_mean_quality_values(snp_fh, ~rb4&tumor_base1, mean_mapQ);
-                    fputc('\t', snp_fh);
-                    print_base_count(snp_fh, ~rb4&tumor_base1, base_occ);
-                    fputc('\t', snp_fh);
+                out.tumor.genotype = tumor_base1;
+                out.tumor.consensus_quality = tumor_score1;
+                out.tumor.variant_allele_quality = tumor_snp_q;
+                out.tumor.somatic_score = qPosteriorSum;
 
-                    /* mean {map,base} quality for normal */
-                    mean_quality_values(pl2, n2, rb4|normal_base1, mean_baseQ, mean_mapQ, base_occ);
-                    print_mean_quality_values(snp_fh, rb4, mean_baseQ);
-                    fputc('\t', snp_fh);
-                    print_mean_quality_values(snp_fh, rb4, mean_mapQ);
-                    fputc('\t', snp_fh);
-                    print_base_count(snp_fh, rb4, base_occ);
-                    fputc('\t', snp_fh);
-                    print_mean_quality_values(snp_fh, ~rb4&normal_base1, mean_baseQ);
-                    fputc('\t', snp_fh);
-                    print_mean_quality_values(snp_fh, ~rb4&normal_base1, mean_mapQ);
-                    fputc('\t', snp_fh);
-                    print_base_count(snp_fh, ~rb4&normal_base1, base_occ);
-                    fputc('\n', snp_fh);
+                if (rb4 == tumor_base1 && tumor_base1 == normal_base1)
+                    out.tumor.variant_status = WILDTYPE;
+                if (tumor_base1 == normal_base1)
+                    out.tumor.variant_status = GERMLINE;
+                else if (is_loh(tumor_base1, normal_base1))
+                    out.tumor.variant_status = LOH;
+                else if (qPosteriorSum > 0)
+                    out.tumor.variant_status = SOMATIC;
+                else
+                    out.tumor.variant_status = UNKNOWN;
                 }
+                get_dqstats(pl1, n1, rb4, rb4|tumor_base1, &out.tumor.dqstats);
+
+                out.normal.genotype = normal_base1;
+                out.normal.consensus_quality = normal_score1;
+                out.normal.variant_allele_quality = normal_snp_q;
+                out.normal.somatic_score = -1;
+                if (out.normal.genotype == rb4) 
+                    out.normal.variant_status = WILDTYPE;
+                else
+                    out.normal.variant_status = GERMLINE;
+                get_dqstats(pl2, n2, rb4, rb4|normal_base1, &out.normal.dqstats);
+
+                output_formatter_write(d->output_formatter, &out);
                 fflush(snp_fh);
             }
         }

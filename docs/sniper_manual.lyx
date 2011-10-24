@@ -42,7 +42,7 @@
 \begin_body
 
 \begin_layout Title
-Somatic Sniper User Manual
+SomaticSniper User Manual
 \end_layout
 
 \begin_layout Author
@@ -94,7 +94,7 @@ Usage
 \end_layout
 
 \begin_layout Standard
-somaticsniper [options] -f <ref.fasta> <tumor.bam> <normal.bam> <snv_output_file>
+bam-somaticsniper [options] -f <ref.fasta> <tumor.bam> <normal.bam> <snv_output_file>
 \end_layout
 
 \begin_layout Subsubsection*
@@ -141,7 +141,7 @@ Options:
 \end_layout
 
 \begin_layout Section*
-Notes on running somaticsniper
+Notes on running SomaticSniper
 \end_layout
 
 \begin_layout Standard
@@ -162,7 +162,7 @@ File Format
 \end_layout
 
 \begin_layout Standard
-The file output by somatic sniper consists of line for all sites whose consensus
+The file output by SomaticSniper consists of line for all sites whose consensus
  differs from the reference base.
  Each line contains the following tab-separated values:
 \end_layout

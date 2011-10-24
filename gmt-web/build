@@ -30,10 +30,15 @@ cp $src_path $tmpdir
 pushd $tmpdir
 lyx --export pdf $doc_basename.lyx
 lyx --export latex $doc_basename.lyx
-mk4ht xhmlatex $doc_basename.tex
+mk4ht xhmlatex $doc_basename.tex > $tmpdir/mk4ht.log 2>&1
+[ $? -ne 0 ] && {
+    echo "Failed to convert latex to html"
+    cat $tmpdir/mk4ht.log
+}
 rm -rf $output_dir
 mkdir -p $output_dir
-sed 's;<a id=.magicparlabel-[0-9]*. />;;g' $doc_basename.html > $output_dir/$doc_basename.html
+sed 's;<a id=.magicparlabel-[0-9]*. />;;g' $doc_basename.html > $output_dir/documentation.html
+sed -i "1i ---\ndoc_downloads:\n- $doc_basename.pdf\n- $doc_basename.tex\n---\n" $output_dir/documentation.html
 mv $doc_basename.pdf $output_dir
 mv $doc_basename.tex $output_dir
 popd
