@@ -246,7 +246,7 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                 else
                     out.tumor.variant_status = UNKNOWN;
 
-                get_dqstats(pl1, n1, rb4, rb4|tumor_genotype, &out.tumor.dqstats);
+                get_dqstats(pl1, n1, rb4, rb4|tumor_genotype|normal_genotype, &out.tumor.dqstats);
 
                 out.normal.genotype = normal_base1;
                 out.normal.consensus_quality = normal_score1;
@@ -258,7 +258,7 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                     out.normal.variant_status = WILDTYPE;
                 else
                     out.normal.variant_status = GERMLINE;
-                get_dqstats(pl2, n2, rb4, rb4|normal_genotype, &out.normal.dqstats);
+                get_dqstats(pl2, n2, rb4, rb4|normal_genotype|tumor_genotype, &out.normal.dqstats);
 
                 output_formatter_write(d->output_formatter, &out);
                 fflush(snp_fh);

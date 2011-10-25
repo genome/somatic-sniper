@@ -6,7 +6,7 @@
 #include <time.h>
 
 /* vcf header fields */
-static const char *_vcf_format_string = "GT:IGT:DP:DP4:GQ:JGQ:VAQ:BQ:MQ:SS:SSC";
+static const char *_vcf_format_string = "GT:IGT:DP:DP4:BCOUNT:GQ:JGQ:VAQ:BQ:MQ:SS:SSC";
 const static struct {
     const char *id;
     const char *number;
@@ -17,6 +17,7 @@ const static struct {
     { "IGT", "1", "String", "Genotype when called independently (only filled if called in joint prior mode)" },
     { "DP", "1", "Integer", "Total read depth" },
     { "DP4", "4", "Integer", "# high-quality ref-forward bases, ref-reverse, alt-forward and alt-reverse bases" },
+    { "BCOUNT", "4", "Integer", "Occurrence count for each base at this site (A,C,G,T)" },
     { "GQ", "1", "Integer", "Genotype quality" },
     { "JGQ", "1", "Integer", "Joint genotype quality (only filled if called in join prior mode)" },
     { "VAQ", "1", "Integer", "Variant allele quality" },
@@ -89,13 +90,17 @@ void output_vcf_sample(FILE *fh, int ref_base4, int alts, const sample_data_t *s
         output_vcf_gt(fh, ref_base4, alts, s->genotype);
     }
 
-    /* DP, DP4, GQ, JGQ, VAQ */
-    fprintf(fh, ":%d:%d,%d,%d,%d:%d:",
+    /* DP, DP4, BCOUNT, GQ, JGQ, VAQ */
+    fprintf(fh, ":%d:%d,%d,%d,%d:%d,%d,%d,%d:%d:",
         s->dqstats.total_depth,
         s->dqstats.dp4[0],
         s->dqstats.dp4[1],
         s->dqstats.dp4[2],
         s->dqstats.dp4[3], 
+        s->dqstats.base_occ[0],
+        s->dqstats.base_occ[1],
+        s->dqstats.base_occ[2],
+        s->dqstats.base_occ[3], 
         s->consensus_quality
         );
     if(s->joint_genotype) {
