@@ -197,6 +197,11 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                         joint_consensus_quality = qAdd(joint_consensus_quality,lk);
                     }
                 }
+
+                //cap the joint consensus quality
+                if(joint_consensus_quality > 255) {
+                    joint_consensus_quality = 255;
+                }
                 //set the argmax values for the joint genotype
                 max_jointlk_normal = glfBase[max_jointlk_normal_index];
                 max_jointlk_tumor = glfBase[max_jointlk_tumor_index];
