@@ -151,6 +151,7 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
 
         int max_jointlk_normal = 0;
         int max_jointlk_tumor = 0;
+        int joint_consensus_quality = 255;
 
         if (rb4 != 15 && tumor_base1 != 15 && tumor_base1 != rb4) { // a SNP
             tumor_snp_q = (tumor_base2 == rb4)? tumor_score1 : tumor_score1 + tumor_score2;
@@ -188,14 +189,17 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                         marginal_probability = qAdd(marginal_probability,joint_lk[i][j]);
                     }
                 }
-                //set the argmax values for the joint genotype
-                max_jointlk_normal = glfBase[max_jointlk_normal_index];
-                max_jointlk_tumor = glfBase[max_jointlk_tumor_index];
                 
                 for(j = 0; j < 10; j++) {
                     int lk = joint_lk[j][j] - marginal_probability;
                     qPosteriorSum = qAdd(qPosteriorSum,lk);
+                    if(i != max_jointlk_normal_index && j != max_jointlk_tumor_index) {
+                        joint_consensus_quality = qAdd(joint_consensus_quality,lk);
+                    }
                 }
+                //set the argmax values for the joint genotype
+                max_jointlk_normal = glfBase[max_jointlk_normal_index];
+                max_jointlk_tumor = glfBase[max_jointlk_tumor_index];
             }
             else {
                 int j;
@@ -210,37 +214,46 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                 out.pos = pos;
                 out.ref_base = rb;
                 out.ref_base4 = rb4;
-            }
-            else {
-
                 out.tumor.genotype = tumor_base1;
                 out.tumor.consensus_quality = tumor_score1;
                 out.tumor.variant_allele_quality = tumor_snp_q;
                 out.tumor.somatic_score = qPosteriorSum;
+                out.tumor.joint_genotype = max_jointlk_tumor;
+                out.tumor.joint_consensus_quality = joint_consensus_quality;
 
-                if (rb4 == tumor_base1 && tumor_base1 == normal_base1)
+                int tumor_genotype = tumor_base1;
+                if(max_jointlk_tumor) {
+                    tumor_genotype = max_jointlk_tumor;
+                }
+                int normal_genotype = normal_base1;
+                if(max_jointlk_normal) {
+                    normal_genotype = max_jointlk_normal;
+                }
+
+                if (rb4 == tumor_genotype && tumor_genotype == normal_genotype)
                     out.tumor.variant_status = WILDTYPE;
-                if (tumor_base1 == normal_base1)
+                if (tumor_genotype == normal_genotype)
                     out.tumor.variant_status = GERMLINE;
-                else if (is_loh(tumor_base1, normal_base1))
+                else if (is_loh(tumor_genotype, normal_genotype))
                     out.tumor.variant_status = LOH;
                 else if (qPosteriorSum > 0)
                     out.tumor.variant_status = SOMATIC;
                 else
                     out.tumor.variant_status = UNKNOWN;
 
-                }
-                get_dqstats(pl1, n1, rb4, rb4|tumor_base1, &out.tumor.dqstats);
+                get_dqstats(pl1, n1, rb4, rb4|tumor_genotype, &out.tumor.dqstats);
 
                 out.normal.genotype = normal_base1;
                 out.normal.consensus_quality = normal_score1;
                 out.normal.variant_allele_quality = normal_snp_q;
                 out.normal.somatic_score = -1;
+                out.normal.joint_genotype = max_jointlk_normal;
+                out.normal.joint_consensus_quality = joint_consensus_quality;
                 if (out.normal.genotype == rb4) 
                     out.normal.variant_status = WILDTYPE;
                 else
                     out.normal.variant_status = GERMLINE;
-                get_dqstats(pl2, n2, rb4, rb4|normal_base1, &out.normal.dqstats);
+                get_dqstats(pl2, n2, rb4, rb4|normal_genotype, &out.normal.dqstats);
 
                 output_formatter_write(d->output_formatter, &out);
                 fflush(snp_fh);

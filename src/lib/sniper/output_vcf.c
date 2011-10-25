@@ -6,7 +6,7 @@
 #include <time.h>
 
 /* vcf header fields */
-static const char *_vcf_format_string = "GT:DP:DP4:GQ:VAQ:BQ:MQ:SS:SSC";
+static const char *_vcf_format_string = "GT:IGT:DP:DP4:GQ:JGQ:VAQ:BQ:MQ:SS:SSC";
 const static struct {
     const char *id;
     const char *number;
@@ -14,9 +14,11 @@ const static struct {
     const char *description;
 } _vcf_format_fields[] = {
     { "GT", "1", "String", "Genotype" },
+    { "IGT", "1", "String", "Genotype when called independently (only filled if called in joint prior mode)" },
     { "DP", "1", "Integer", "Total read depth" },
     { "DP4", "4", "Integer", "# high-quality ref-forward bases, ref-reverse, alt-forward and alt-reverse bases" },
     { "GQ", "1", "Integer", "Genotype quality" },
+    { "JGQ", "1", "Integer", "Joint genotype quality (only filled if called in join prior mode)" },
     { "VAQ", "1", "Integer", "Variant allele quality" },
     { "BQ", ".", "Integer", "Average base quality" },
     { "MQ", ".", "Integer", "Average mapping quality" },
@@ -75,19 +77,34 @@ static void output_vcf_gt(FILE *fh, uint32_t ref_base, uint32_t alts, uint32_t g
 }
 
 void output_vcf_sample(FILE *fh, int ref_base4, int alts, const sample_data_t *s) {
-    /* GT */
-    output_vcf_gt(fh, ref_base4, alts, s->genotype);
+    /* GT, IGT */
+    if(s->joint_genotype) {
+        output_vcf_gt(fh, ref_base4, alts, s->joint_genotype);
+        fputc(':', fh);
+        output_vcf_gt(fh, ref_base4, alts, s->genotype);
+    }
+    else {
+        output_vcf_gt(fh, ref_base4, alts, s->genotype);
+        fputc(':',fh);
+        output_vcf_gt(fh, ref_base4, alts, s->genotype);
+    }
 
-    /* DP, DP4, GQ, VAQ */
-    fprintf(fh, ":%d:%d,%d,%d,%d:%d:%d:",
+    /* DP, DP4, GQ, JGQ, VAQ */
+    fprintf(fh, ":%d:%d,%d,%d,%d:%d:",
         s->dqstats.total_depth,
         s->dqstats.dp4[0],
         s->dqstats.dp4[1],
         s->dqstats.dp4[2],
         s->dqstats.dp4[3], 
-        s->consensus_quality,
-        s->variant_allele_quality
+        s->consensus_quality
         );
+    if(s->joint_genotype) {
+        fprintf(fh, "%d:",s->joint_consensus_quality);
+    }
+    else {
+        fputs(".:",fh);
+    }
+    fprintf(fh, "%d:", s->variant_allele_quality);
 
     /* BQ, MQ */
     output_vcf_int4_masked(fh, s->dqstats.mean_baseQ, s->genotype);
