@@ -382,6 +382,10 @@ Minimally, you must provide the program the reference fasta the bams were
  We have also found that few variants with a somatic score less than 15
  validate, but you may decrease the minimum score or increase it to a higher
  threshold (eg -Q 40).
+ To obtain high confidence sites, we recommend also thresholding the minimum
+ average mapping quality for the variant base to 40 for reads aligned with
+ BWA or 70 for reads aligned with MAQ.
+ We have not tested other aligners at this time.
  Disabling priors is not recommended, but may increase sensitivity at the
  cost of a decrease in specificity.
 \end_layout
