@@ -4,7 +4,7 @@ p. The purpose of this program is to identify single nucleotide positions that
 are different between tumor and normal (or, in theory, any two bam files).
 It takes a tumor bam and a normal bam and compares the two to determine
 the differences. Complete documentation is available at the project
-"web site":http://gmt.genome.wustl.edu/somatic-sniper/.
+[web site](http://gmt.genome.wustl.edu/somatic-sniper/).
 
 ## Build Dependencies
 
