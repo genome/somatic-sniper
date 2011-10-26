@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
     d->c = sniper_maqcns_init();
     int use_priors = 1;
     d->use_joint_priors = 0;
-    d->somatic_mutation_rate = 0.000001;
+    d->somatic_mutation_rate = 0.01;
     const char *output_format = "classic";
 
     while ((c = getopt(argc, argv, "f:T:N:r:I:G:q:Q:pJs:F:")) >= 0) {

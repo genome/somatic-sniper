@@ -37,6 +37,7 @@
 \tracking_changes false
 \output_changes false
 \author "" 
+\author "" 
 \end_header
 
 \begin_body
@@ -274,7 +275,7 @@ FLAG Use prior probabilities accounting for the somatic mutation rate
 \begin_inset Text
 
 \begin_layout Plain Layout
-FLOAT prior probability of a somatic mutation (implies -J) [0.000001] 
+FLOAT prior probability of a somatic mutation (implies -J) [0.01] 
 \end_layout
 
 \end_inset
