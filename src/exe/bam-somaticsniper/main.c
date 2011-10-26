@@ -32,15 +32,14 @@ void usage(const char* progname, pu_data2_t* d) {
     fprintf(stderr, "        -f FILE   REQUIRED reference sequence in the FASTA format\n\n");
     fprintf(stderr, "Options: \n");
     fprintf(stderr, "        -q INT    filtering reads with mapping quality less than INT [%d]\n", d->mapQ);
-    fprintf(stderr, "        -Q INT    filtering somatic snp output with somatic quality less than  INT [15]\n");
+    fprintf(stderr, "        -Q INT    filtering somatic snv output with somatic quality less than  INT [15]\n");
     fprintf(stderr, "        -p FLAG   disable priors in the somatic calculation. Increases sensitivity for solid tumors\n");
     fprintf(stderr, "        -J FLAG   Use prior probabilities accounting for the somatic mutation rate\n");
     fprintf(stderr, "        -s FLOAT  prior probability of a somatic mutation (implies -J) [%f]\n",d->somatic_mutation_rate);
     fprintf(stderr, "        -T FLOAT  theta in maq consensus calling model (for -c/-g) [%f]\n", d->c->theta);
     fprintf(stderr, "        -N INT    number of haplotypes in the sample (for -c/-g) [%d]\n", d->c->n_hap);
     fprintf(stderr, "        -r FLOAT  prior of a difference between two haplotypes (for -c/-g) [%f]\n", d->c->het_rate);
-    fprintf(stderr, "        -F <fmt>  where fmt is one of vcf or classic to control output type [%s]\n",
-        _default_output_format);
+    fprintf(stderr, "        -F STRING select output format [%s]\n", _default_output_format);
     fprintf(stderr, "           Available formats:\n");
     for (i = 0; i < n_formats; ++i) {
         fprintf(stderr, "             %s\n", output_formatter_name(i));
