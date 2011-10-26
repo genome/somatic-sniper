@@ -1,8 +1,9 @@
-#LyX file created by tex2lyx 1.6.5
-\lyxformat 264
+#LyX 1.6.5 created this file. For more info see http://www.lyx.org/
+\lyxformat 345
 \begin_document
 \begin_header
 \textclass article
+\use_default_options false
 \language english
 \inputencoding latin9
 \font_roman default
@@ -13,9 +14,11 @@
 \font_osf false
 \font_sf_scale 100
 \font_tt_scale 100
+
 \graphics default
 \paperfontsize default
 \spacing single
+\use_hyperref false
 \papersize default
 \use_geometry false
 \use_amsmath 1
@@ -33,28 +36,37 @@
 \paperpagestyle default
 \tracking_changes false
 \output_changes false
+\author "" 
 \end_header
 
 \begin_body
 
 \begin_layout Title
-
 SomaticSniper User Manual
 \end_layout
 
 \begin_layout Author
-
-David E. Larson and Christopher C. Harris
+David E.
+ Larson, Travis E.
+ Abbott and Christopher C.
+ Harris
 \end_layout
 
 \begin_layout Date
-
-September 29, 2010
+October 26, 2011
 \end_layout
 
 \begin_layout Standard
-
-The purpose of this program is to identify single nucleotide positions that are different between tumor and normal (or, in theory, any two bam files). It takes a tumor bam and a normal bam and compares the two to determine the differences. It outputs a file in a format very similar to Samtools consensus format. It uses the genotype likelihood model of MAQ (as implemented in Samtools) and then calculates the probability that the tumor and normal genotypes are different. This probability is reported as a somatic score. The somatic score is the Phred-scaled probability (between 
+The purpose of this program is to identify single nucleotide positions that
+ are different between tumor and normal (or, in theory, any two bam files).
+ It takes a tumor bam and a normal bam and compares the two to determine
+ the differences.
+ It outputs a file in a format very similar to Samtools consensus format.
+ It uses the genotype likelihood model of MAQ (as implemented in Samtools)
+ and then calculates the probability that the tumor and normal genotypes
+ are different.
+ This probability is reported as a somatic score.
+ The somatic score is the Phred-scaled probability (between 
 \begin_inset Formula $0$
 \end_inset
 
@@ -74,39 +86,61 @@ The purpose of this program is to identify single nucleotide positions that are 
 \begin_inset Formula $1-10^{\left(\frac{255}{-10}\right)}$
 \end_inset
 
- that the genotypes are different between tumor and normal. This is consistent with how the SAM format reports such probabilities.
+ that the genotypes are different between tumor and normal.
+ This is consistent with how the SAM format reports such probabilities.
+ 
+\end_layout
+
+\begin_layout Standard
+There are two modes, the joint genotyping mode (-J) takes into account the
+ fact that the tumor and normal samples are not entirely independent and
+ also takes into account the prior probability of a somatic mutation.
+ This probability can be scaled to control the sensitivity of the algorithm.
+ An accurate value for this prior would be 
+\begin_inset Formula $0.000001$
+\end_inset
+
+, but this may result in a severe lack of sensitivity at lower depths.
+ A less realistic prior probability will generate more sensitive results
+ at the expense of an increase in the number of false positives.
+ To get a similar sensitivity to the default mode, we recommend using a
+ prior of 
+\begin_inset Formula $0.01$
+\end_inset
+
+.
+ The default mode treats the two samples as if they came from two different
+ individuals.
+ This mode uses a less accurate mathematical model, but yields good results,
+ especially if the normal may contain some tumor cells or the tumor is quite
+ impure.
 \end_layout
 
 \begin_layout Section*
-
 Usage
 \end_layout
 
 \begin_layout Standard
-
-bam-somaticsniper [options] -f <ref.fasta> <tumor.bam> <normal.bam> <snv_output_file>
+bam-somaticsniper [options] -f <ref.fasta> <tumor.bam> <normal.bam> <snv_output_fil
+e>
 \end_layout
 
 \begin_layout Subsubsection*
-
 Required Option:
 \end_layout
 
 \begin_layout Standard
 \align center
-
-
-\begin_inset Tabular 
+\begin_inset Tabular
 <lyxtabular version="3" rows="1" columns="2">
 <features>
-<column alignment="center" valignment="top">
-<column alignment="left" valignment="top">
+<column alignment="center" valignment="top" width="0">
+<column alignment="left" valignment="top" width="0">
 <row>
 <cell alignment="center" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 -f 
 \end_layout
 
@@ -115,8 +149,7 @@ Required Option:
 <cell alignment="left" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 FILE 
 \emph on
 REQUIRED
@@ -135,25 +168,21 @@ REQUIRED
 \end_layout
 
 \begin_layout Subsubsection*
-
 Options: 
 \end_layout
 
 \begin_layout Standard
 \align center
-
-
-\begin_inset Tabular 
+\begin_inset Tabular
 <lyxtabular version="3" rows="9" columns="2">
 <features>
-<column alignment="center" valignment="top">
-<column alignment="left" valignment="top">
+<column alignment="center" valignment="top" width="0">
+<column alignment="left" valignment="top" width="0">
 <row>
 <cell alignment="center" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 -q 
 \end_layout
 
@@ -162,8 +191,7 @@ Options:
 <cell alignment="left" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 INT filtering reads with mapping quality less than INT [0] 
 \end_layout
 
@@ -174,8 +202,7 @@ INT filtering reads with mapping quality less than INT [0]
 <cell alignment="center" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 -Q 
 \end_layout
 
@@ -184,9 +211,9 @@ INT filtering reads with mapping quality less than INT [0]
 <cell alignment="left" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
-INT filtering somatic snv output with somatic quality less than INT [15] 
+\begin_layout Plain Layout
+INT filtering somatic snv output with somatic quality less than INT [15]
+ 
 \end_layout
 
 \end_inset
@@ -196,8 +223,7 @@ INT filtering somatic snv output with somatic quality less than INT [15]
 <cell alignment="center" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 -p 
 \end_layout
 
@@ -206,9 +232,9 @@ INT filtering somatic snv output with somatic quality less than INT [15]
 <cell alignment="left" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
-FLAG disable priors in the somatic calculation. Increases sensitivity for solid tumors.
+\begin_layout Plain Layout
+FLAG disable priors in the somatic calculation.
+ Increases sensitivity for solid tumors.
 \end_layout
 
 \end_inset
@@ -218,8 +244,7 @@ FLAG disable priors in the somatic calculation. Increases sensitivity for solid 
 <cell alignment="center" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 -J 
 \end_layout
 
@@ -228,8 +253,7 @@ FLAG disable priors in the somatic calculation. Increases sensitivity for solid 
 <cell alignment="left" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 FLAG Use prior probabilities accounting for the somatic mutation rate 
 \end_layout
 
@@ -240,8 +264,7 @@ FLAG Use prior probabilities accounting for the somatic mutation rate
 <cell alignment="center" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 -s 
 \end_layout
 
@@ -250,8 +273,7 @@ FLAG Use prior probabilities accounting for the somatic mutation rate
 <cell alignment="left" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 FLOAT prior probability of a somatic mutation (implies -J) [0.000001] 
 \end_layout
 
@@ -262,8 +284,7 @@ FLOAT prior probability of a somatic mutation (implies -J) [0.000001]
 <cell alignment="center" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 -T 
 \end_layout
 
@@ -272,8 +293,7 @@ FLOAT prior probability of a somatic mutation (implies -J) [0.000001]
 <cell alignment="left" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 FLOAT theta in maq consensus calling model (for -c/-g) [0.850000] 
 \end_layout
 
@@ -284,8 +304,7 @@ FLOAT theta in maq consensus calling model (for -c/-g) [0.850000]
 <cell alignment="center" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 -N 
 \end_layout
 
@@ -294,8 +313,7 @@ FLOAT theta in maq consensus calling model (for -c/-g) [0.850000]
 <cell alignment="left" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 INT number of haplotypes in the sample (for -c/-g) [2] 
 \end_layout
 
@@ -306,8 +324,7 @@ INT number of haplotypes in the sample (for -c/-g) [2]
 <cell alignment="center" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 -r 
 \end_layout
 
@@ -316,9 +333,9 @@ INT number of haplotypes in the sample (for -c/-g) [2]
 <cell alignment="left" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
-FLOAT prior of a difference between two haplotypes (for -c/-g) [0.001000] 
+\begin_layout Plain Layout
+FLOAT prior of a difference between two haplotypes (for -c/-g) [0.001000]
+ 
 \end_layout
 
 \end_inset
@@ -328,8 +345,7 @@ FLOAT prior of a difference between two haplotypes (for -c/-g) [0.001000]
 <cell alignment="center" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 -F 
 \end_layout
 
@@ -338,8 +354,7 @@ FLOAT prior of a difference between two haplotypes (for -c/-g) [0.001000]
 <cell alignment="left" valignment="top" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 STRING select output format (vcf or classic) [classic] 
 \end_layout
 
@@ -354,252 +369,215 @@ STRING select output format (vcf or classic) [classic]
 \end_layout
 
 \begin_layout Section*
-
 Notes on running SomaticSniper
 \end_layout
 
 \begin_layout Standard
-
-Minimally, you must provide the program the reference fasta the bams were aligned against (passed with the -f option), a tumor bam, a normal bam, and the filename of the resulting output file. We recommend filtering out reads with a mapping quality of 0 (i.e. use -q 1) as they are typically randomly placed in the genome. We have also found that few variants with a somatic score less than 15 validate, but you may decrease the minimum score or increase it to a higher threshold (eg -Q 40). Disabling priors is not recommended, but may increase sensitivity at the cost of a decrease in specificity.
+Minimally, you must provide the program the reference fasta the bams were
+ aligned against (passed with the -f option), a tumor bam, a normal bam,
+ and the filename of the resulting output file.
+ We recommend filtering out reads with a mapping quality of 0 (i.e.
+ use -q 1) as they are typically randomly placed in the genome.
+ We have also found that few variants with a somatic score less than 15
+ validate, but you may decrease the minimum score or increase it to a higher
+ threshold (eg -Q 40).
+ Disabling priors is not recommended, but may increase sensitivity at the
+ cost of a decrease in specificity.
 \end_layout
 
 \begin_layout Section*
-
 File Formats
 \end_layout
 
 \begin_layout Standard
-
-The output by SomaticSniper consists of line for all sites whose consensus differs from the reference base. Each of the three available output formats is described below 
+The output by SomaticSniper consists of line for all sites whose consensus
+ differs from the reference base.
+ Each of the three available output formats is described below 
 \end_layout
 
 \begin_layout Subsection*
-
 Classic:
 \end_layout
 
 \begin_layout Standard
-
 Each line contains the following tab-separated values: 
 \end_layout
 
 \begin_layout Enumerate
-
 Chromosome 
 \end_layout
 
 \begin_layout Enumerate
-
 Position 
 \end_layout
 
 \begin_layout Enumerate
-
 Reference base 
 \end_layout
 
 \begin_layout Enumerate
-
 IUB genotype of tumor 
 \end_layout
 
 \begin_layout Enumerate
-
 IUB genotype of normal 
 \end_layout
 
 \begin_layout Enumerate
-
 Somatic Score 
 \end_layout
 
 \begin_layout Enumerate
-
 Tumor Consensus quality 
 \end_layout
 
 \begin_layout Enumerate
-
 Tumor variant allele quality 
 \end_layout
 
 \begin_layout Enumerate
-
 Tumor mean mapping quality 
 \end_layout
 
 \begin_layout Enumerate
-
 Normal Consensus quality 
 \end_layout
 
 \begin_layout Enumerate
-
 Normal variant allele quality 
 \end_layout
 
 \begin_layout Enumerate
-
 Normal mean mapping quality 
 \end_layout
 
 \begin_layout Enumerate
-
 Depth in tumor (# of reads crossing the position) 
 \end_layout
 
 \begin_layout Enumerate
-
 Depth in normal (# of reads crossing the position) 
 \end_layout
 
 \begin_layout Enumerate
-
 Mean base quality of reads supporting reference in tumor 
 \end_layout
 
 \begin_layout Enumerate
-
 Mean mapping quality of reads supporting reference in tumor 
 \end_layout
 
 \begin_layout Enumerate
-
 Depth of reads supporting reference in tumor 
 \end_layout
 
 \begin_layout Enumerate
-
 Mean base quality of reads supporting variant(s) in tumor 
 \end_layout
 
 \begin_layout Enumerate
-
 Mean mapping quality of reads supporting variant(s) in tumor 
 \end_layout
 
 \begin_layout Enumerate
-
 Depth of reads supporting variant(s) in tumor 
 \end_layout
 
 \begin_layout Enumerate
-
 Mean base quality of reads supporting reference in normal 
 \end_layout
 
 \begin_layout Enumerate
-
 Mean mapping quality of reads supporting reference in normal 
 \end_layout
 
 \begin_layout Enumerate
-
 Depth of reads supporting reference in normal 
 \end_layout
 
 \begin_layout Enumerate
-
 Mean base quality of reads supporting variant(s) in normal 
 \end_layout
 
 \begin_layout Enumerate
-
 Mean mapping quality of reads supporting variant(s) in normal 
 \end_layout
 
 \begin_layout Enumerate
-
 Depth of reads supporting variant(s) in normal 
 \end_layout
 
 \begin_layout Subsection*
-
 VCF
 \end_layout
 
 \begin_layout Standard
-
-VCF output from SomaticSniper conforms to version 4.1 of the VCF specification. Hence, each non-header output line contains the following fields: 
+VCF output from SomaticSniper conforms to version 4.1 of the VCF specification.
+ Hence, each non-header output line contains the following fields: 
 \end_layout
 
 \begin_layout Enumerate
-
 Chromosome 
 \end_layout
 
 \begin_layout Enumerate
-
 Position 
 \end_layout
 
 \begin_layout Enumerate
-
 ID (unused) 
 \end_layout
 
 \begin_layout Enumerate
-
 Reference base 
 \end_layout
 
 \begin_layout Enumerate
-
 Alternate bases (comma separated) 
 \end_layout
 
 \begin_layout Enumerate
-
 Quality (unused) 
 \end_layout
 
 \begin_layout Enumerate
-
 Filters (unused) 
 \end_layout
 
 \begin_layout Enumerate
-
 INFO (unused) 
 \end_layout
 
 \begin_layout Enumerate
-
 FORMAT specification for each sample 
 \end_layout
 
 \begin_layout Enumerate
-
 NORMAL sample data 
 \end_layout
 
 \begin_layout Enumerate
-
 TUMOR sample data 
 \end_layout
 
 \begin_layout Standard
-
 The following FORMAT fields will be populated for each of NORMAL and TUMOR.
 \end_layout
 
 \begin_layout Standard
 \align center
-
-
-\begin_inset Tabular 
+\begin_inset Tabular
 <lyxtabular version="3" rows="13" columns="4">
 <features>
-<column alignment="right" valignment="top" leftline="true" rightline="true">
-<column alignment="center" valignment="top" rightline="true">
-<column alignment="center" valignment="top" rightline="true">
-<column alignment="none" valignment="top" rightline="true" width="5cm">
-<row topline="true">
+<column alignment="right" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="none" valignment="top" width="5cm">
+<row>
 <cell alignment="right" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 
 \series bold
 ID
@@ -612,8 +590,7 @@ ID
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 
 \series bold
 Number
@@ -626,8 +603,7 @@ Number
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 
 \series bold
 Type
@@ -640,8 +616,7 @@ Type
 <cell alignment="none" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 
 \series bold
 Description
@@ -652,12 +627,11 @@ Description
 \end_inset
 </cell>
 </row>
-<row topline="true">
+<row>
 <cell alignment="right" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 GT 
 \end_layout
 
@@ -666,8 +640,7 @@ GT
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 1 
 \end_layout
 
@@ -676,8 +649,7 @@ GT
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 String 
 \end_layout
 
@@ -686,20 +658,18 @@ String
 <cell alignment="none" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 Genotype 
 \end_layout
 
 \end_inset
 </cell>
 </row>
-<row topline="true">
+<row>
 <cell alignment="right" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 IGT 
 \end_layout
 
@@ -708,8 +678,7 @@ IGT
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 1 
 \end_layout
 
@@ -718,8 +687,7 @@ IGT
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 String 
 \end_layout
 
@@ -728,20 +696,19 @@ String
 <cell alignment="none" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
-Genotype when called independently (only filled if called in joint prior mode) 
+\begin_layout Plain Layout
+Genotype when called independently (only filled if called in joint prior
+ mode) 
 \end_layout
 
 \end_inset
 </cell>
 </row>
-<row topline="true">
+<row>
 <cell alignment="right" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 DP 
 \end_layout
 
@@ -750,8 +717,7 @@ DP
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 1 
 \end_layout
 
@@ -760,8 +726,7 @@ DP
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 Integer 
 \end_layout
 
@@ -770,20 +735,18 @@ Integer
 <cell alignment="none" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 Total read depth 
 \end_layout
 
 \end_inset
 </cell>
 </row>
-<row topline="true">
+<row>
 <cell alignment="right" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 DP4 
 \end_layout
 
@@ -792,8 +755,7 @@ DP4
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 4 
 \end_layout
 
@@ -802,8 +764,7 @@ DP4
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 Integer 
 \end_layout
 
@@ -812,20 +773,19 @@ Integer
 <cell alignment="none" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
-# high-quality ref-forward bases, ref-reverse, alt-forward and alt-reverse bases 
+\begin_layout Plain Layout
+# high-quality ref-forward bases, ref-reverse, alt-forward and alt-reverse
+ bases 
 \end_layout
 
 \end_inset
 </cell>
 </row>
-<row topline="true">
+<row>
 <cell alignment="right" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 BCOUNT 
 \end_layout
 
@@ -834,8 +794,7 @@ BCOUNT
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 4 
 \end_layout
 
@@ -844,8 +803,7 @@ BCOUNT
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 Integer 
 \end_layout
 
@@ -854,20 +812,18 @@ Integer
 <cell alignment="none" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 Occurrence count for each base at this site (A,C,G,T) 
 \end_layout
 
 \end_inset
 </cell>
 </row>
-<row topline="true">
+<row>
 <cell alignment="right" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 GQ 
 \end_layout
 
@@ -876,8 +832,7 @@ GQ
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 1 
 \end_layout
 
@@ -886,8 +841,7 @@ GQ
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 Integer 
 \end_layout
 
@@ -896,20 +850,18 @@ Integer
 <cell alignment="none" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 Genotype quality 
 \end_layout
 
 \end_inset
 </cell>
 </row>
-<row topline="true">
+<row>
 <cell alignment="right" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 JGQ 
 \end_layout
 
@@ -918,8 +870,7 @@ JGQ
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 1 
 \end_layout
 
@@ -928,8 +879,7 @@ JGQ
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 Integer 
 \end_layout
 
@@ -938,20 +888,18 @@ Integer
 <cell alignment="none" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
-Joint genotype quality (only filled if called in join prior mode) 
+\begin_layout Plain Layout
+Joint genotype quality (only filled if called in joint prior mode) 
 \end_layout
 
 \end_inset
 </cell>
 </row>
-<row topline="true">
+<row>
 <cell alignment="right" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 VAQ 
 \end_layout
 
@@ -960,8 +908,7 @@ VAQ
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 1 
 \end_layout
 
@@ -970,8 +917,7 @@ VAQ
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 Integer 
 \end_layout
 
@@ -980,20 +926,18 @@ Integer
 <cell alignment="none" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
-Variant allele quality 
+\begin_layout Plain Layout
+Variant quality 
 \end_layout
 
 \end_inset
 </cell>
 </row>
-<row topline="true">
+<row>
 <cell alignment="right" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 BQ 
 \end_layout
 
@@ -1002,9 +946,9 @@ BQ
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
-. 
+\begin_layout Plain Layout
+.
+ 
 \end_layout
 
 \end_inset
@@ -1012,8 +956,7 @@ BQ
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 Integer 
 \end_layout
 
@@ -1022,20 +965,18 @@ Integer
 <cell alignment="none" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 Average base quality 
 \end_layout
 
 \end_inset
 </cell>
 </row>
-<row topline="true">
+<row>
 <cell alignment="right" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 MQ 
 \end_layout
 
@@ -1044,9 +985,9 @@ MQ
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
-. 
+\begin_layout Plain Layout
+.
+ 
 \end_layout
 
 \end_inset
@@ -1054,8 +995,7 @@ MQ
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 Integer 
 \end_layout
 
@@ -1064,20 +1004,18 @@ Integer
 <cell alignment="none" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 Average mapping quality 
 \end_layout
 
 \end_inset
 </cell>
 </row>
-<row topline="true">
+<row>
 <cell alignment="right" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 SS 
 \end_layout
 
@@ -1086,8 +1024,7 @@ SS
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 1 
 \end_layout
 
@@ -1096,8 +1033,7 @@ SS
 <cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 Integer 
 \end_layout
 
@@ -1106,20 +1042,19 @@ Integer
 <cell alignment="none" valignment="top" topline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
-Variant status relative to non-adjacent normal: 0=wildtype, 1=germline, 2=somatic, 3=LOH, 4=unknown 
+\begin_layout Plain Layout
+Variant status relative to non-adjacent normal: 0=wildtype, 1=germline,
+ 2=somatic, 3=LOH, 4=unknown 
 \end_layout
 
 \end_inset
 </cell>
 </row>
-<row topline="true" bottomline="true">
+<row>
 <cell alignment="right" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 SSC 
 \end_layout
 
@@ -1128,8 +1063,7 @@ SSC
 <cell alignment="center" valignment="top" topline="true" bottomline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 1 
 \end_layout
 
@@ -1138,8 +1072,7 @@ SSC
 <cell alignment="center" valignment="top" topline="true" bottomline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 Integer 
 \end_layout
 
@@ -1148,8 +1081,7 @@ Integer
 <cell alignment="none" valignment="top" topline="true" bottomline="true" rightline="true" usebox="none">
 \begin_inset Text
 
-\begin_layout Standard
-
+\begin_layout Plain Layout
 Somatic Score 
 \end_layout
 
