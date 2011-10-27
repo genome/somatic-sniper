@@ -84,7 +84,7 @@ The purpose of this program is to identify single nucleotide positions that
 \end_inset
 
  means there is a probability of 
-\begin_inset Formula $1-10^{\left(\frac{255}{-10}\right)}$
+\begin_inset Formula $1-10^{\left(255/-10\right)}$
 \end_inset
 
  that the genotypes are different between tumor and normal.
