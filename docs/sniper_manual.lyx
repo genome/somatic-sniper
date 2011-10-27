@@ -574,10 +574,10 @@ The following FORMAT fields will be populated for each of NORMAL and TUMOR.
 \begin_inset Tabular
 <lyxtabular version="3" rows="13" columns="4">
 <features>
-<column alignment="center" valignment="middle" width="0">
-<column alignment="center" valignment="middle" width="0">
-<column alignment="center" valignment="middle" width="0">
-<column alignment="center" valignment="middle" width="5cm">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="left" valignment="top" width="5cm">
 <row>
 <cell alignment="center" valignment="middle" usebox="none">
 \begin_inset Text
