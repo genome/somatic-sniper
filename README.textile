@@ -1,4 +1,4 @@
-h1. Somatic Sniper
+h1. SomaticSniper
 
 p. The purpose of this program is to identify single nucleotide positions that
 are different between tumor and normal (or, in theory, any two bam files).
@@ -11,7 +11,7 @@ h2. Build Dependencies
 * git
 * cmake 2.8+ ("cmake.org":(http://cmake.org))
 * samtools 0.1.6 ("sourceforge download page":(http://sourceforge.net/projects/samtools/files/samtools/0.1.6/))
-** Newer versions will NOT work with somatic sniper
+** Newer versions will NOT work with SomaticSniper
 
 h2. Build Instructions
 
@@ -20,22 +20,15 @@ h3. Build Samtools
 * Download and extract samtools 0.1.6 to a directory of your choosing.
 * Enter that directory and run make
 * Set an environment variable called SAMTOOLS_ROOT to point to this directory. 
-    
-bc..     If you are using bash for example: 
+** For example (if you are using bash), you can use @export SAMTOOLS_ROOT=`pwd`@ if you are still in the samtools directory or simply @export SAMTOOLS_ROOT=/path/to/samtools@ otherwise.
 
-        export SAMTOOLS_ROOT=/path/to/samtools
-
-    or 
-  
-        export SAMTOOLS_ROOT=`pwd`
-
-h3. Clone the Somatic Sniper repository
+h3. Clone the SomaticSniper repository
 * Recursively clone the git repository
 
 bc..         git clone --recursive git://github.com/genome/somatic-sniper.git
 
-h3. Compile Somatic Sniper
-* Somatic Sniper does not support in source builds. Create a new build directory, enter it, and run:
+h3. Compile SomaticSniper
+* SomaticSniper does not support in source builds. Create a new build directory, enter it, and run:
 
 bc..         cmake /path/to/somatic-sniper/repo
         make
