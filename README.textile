@@ -34,3 +34,7 @@ bc..         cmake /path/to/somatic-sniper/repo
         make
 
 p. The binary can then be found in the bin/ subdirectory of your build directory.
+
+h4. User Support
+
+p. Please mail genome-dev@genome.wustl.edu with problems or questions.
