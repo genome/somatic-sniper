@@ -971,7 +971,8 @@ Integer
 \begin_inset Text
 
 \begin_layout Plain Layout
-Average base quality 
+Average base quality of each base in the call, reported in alphabetical
+ order (A,C,G,T)
 \end_layout
 
 \end_inset
@@ -1010,7 +1011,8 @@ Integer
 \begin_inset Text
 
 \begin_layout Plain Layout
-Average mapping quality 
+Average mapping quality of each base in the call, reported in alphabetical
+ order (A,C,G,T)
 \end_layout
 
 \end_inset
