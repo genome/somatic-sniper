@@ -1,4 +1,6 @@
 *.deb
+*.fai
+*.swp
 CMakeCache.txt
 CMakeFiles/
 CPackConfig.cmake
