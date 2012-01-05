@@ -18,6 +18,11 @@ include_directories(version)
 find_package(Samtools 0.1.6 REQUIRED)
 include_directories(${Samtools_INCLUDE_DIRS})
 
+# on linux mint 12, libgtest requires pthreads, so link thread libraries
+# everywhere
+find_package(Threads)
+link_libraries(${CMAKE_THREAD_LIBS_INIT})
+
 if (CMAKE_COMPILER_IS_GNUCC)
     set(CMAKE_C_FLAGS "-Wall")
 endif ()
