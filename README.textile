@@ -4,13 +4,13 @@ p. The purpose of this program is to identify single nucleotide positions that
 are different between tumor and normal (or, in theory, any two bam files).
 It takes a tumor bam and a normal bam and compares the two to determine
 the differences. Complete documentation is available at the project
-"web site":(http://gmt.genome.wustl.edu/somatic-sniper/) or in the included "pdf":(https://github.com/genome/somatic-sniper/blob/master/docs/sniper_manual.pdf).
+"web site":http://gmt.genome.wustl.edu/somatic-sniper/ or in the included "pdf":https://github.com/genome/somatic-sniper/blob/master/docs/sniper_manual.pdf.
 
 h2. Build Dependencies
 
 * git
-* cmake 2.8+ ("cmake.org":(http://cmake.org))
-* samtools 0.1.6 ("sourceforge download page":(http://sourceforge.net/projects/samtools/files/samtools/0.1.6/))
+* cmake 2.8+ ("cmake.org":http://cmake.org)
+* samtools 0.1.6 ("sourceforge download page":http://sourceforge.net/projects/samtools/files/samtools/0.1.6/)
 ** Newer versions will NOT work with SomaticSniper
 
 h2. Build Instructions
@@ -34,6 +34,20 @@ bc..         cmake /path/to/somatic-sniper/repo
         make
 
 p. The binary can then be found in the bin/ subdirectory of your build directory.
+
+h2. FAQ
+h3. I get lots of compile errors indicating that files are missing. How do I fix this?
+
+SomaticSniper requires that it be linked to an old version of samtools (v0.1.6). This typically happens because you have attempted to link to a newer version.
+
+h3. I get errors from cmake about missing modules. How do I fix this?
+
+SomaticSniper contains a git submodule called build-common. It contains helper modules for cmake. If you downloaded the source as a tarball from github or forgot to do a recursive clone using git, then you will not have this submodule and will see cmake errors. If you are using git, we recommend you go back and use the --recursive option when cloning the SomaticSniper repository. If you cannot use git, follow the instructions below to remedy the situation.
+
+# Download the build-common module separately "here":https://github.com/genome/build-common/tarball/master
+# Extract that tarball, and rename the directory it creates to 'build-common'.
+# Replace the empty build-common subdirectory in the sniper directory with directory you just created.
+# Resume following the build instructions.
 
 h2. User Support
 
