@@ -36,6 +36,7 @@ bc..         cmake /path/to/somatic-sniper/repo
 p. The binary can then be found in the bin/ subdirectory of your build directory.
 
 h2. FAQ
+
 h3. I get lots of compile errors indicating that files are missing. How do I fix this?
 
 SomaticSniper requires that it be linked to an old version of samtools (v0.1.6). This typically happens because you have attempted to link to a newer version.
