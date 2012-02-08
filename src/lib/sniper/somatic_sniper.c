@@ -153,7 +153,7 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
         int max_jointlk_tumor = 0;
         int joint_consensus_quality = 255;
 
-        if (rb4 != 15 && tumor_base1 != 15 && tumor_base1 != rb4) { // a SNP
+        if (rb4 != 15 && tumor_base1 != 15 && normal_base1 != 15 && tumor_base1 != normal_base1) { // (tumor_base1 != rb4 || tumor_base1 != normal_base1)) { // a SNP
             tumor_snp_q = (tumor_base2 == rb4)? tumor_score1 : tumor_score1 + tumor_score2;
             if (tumor_snp_q > 255) tumor_snp_q = 255;
 
@@ -235,8 +235,6 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                     normal_genotype = max_jointlk_normal;
                 }
 
-                if (rb4 == tumor_genotype && tumor_genotype == normal_genotype)
-                    out.tumor.variant_status = WILDTYPE;
                 if (tumor_genotype == normal_genotype)
                     out.tumor.variant_status = GERMLINE;
                 else if (is_loh(tumor_genotype, normal_genotype))
