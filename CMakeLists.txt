@@ -15,6 +15,7 @@ set(EXE_VERSION_SUFFIX ${FULL_VERSION})
 configure_file(version/version.h.in version/version.h @ONLY)
 include_directories(version)
 
+message("SAMTOOLS_ROOT is set to: $ENV{SAMTOOLS_ROOT}")
 find_package(Samtools 0.1.6 REQUIRED)
 include_directories(${Samtools_INCLUDE_DIRS})
 
@@ -54,5 +55,8 @@ add_projects(src/exe)
 
 # integration testing
 add_subdirectory(integration-test)
+
+# generate documentation
+add_subdirectory(docs)
 
 include(PackageInfo.cmake)
