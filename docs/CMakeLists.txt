@@ -1,5 +1,5 @@
 set(COPYRIGHT_INPUT ${CMAKE_CURRENT_SOURCE_DIR}/copyright)
-set(COPYRIGHT_DIR share/doc/joinx${EXE_VERSION_SUFFIX})
+set(COPYRIGHT_DIR share/doc/somatic-sniper${EXE_VERSION_SUFFIX})
 
 add_custom_target(doc ALL DEPENDS ${COPYRIGHT_INPUT})
 
