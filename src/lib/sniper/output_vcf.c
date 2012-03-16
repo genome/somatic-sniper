@@ -91,7 +91,7 @@ void output_vcf_sample(FILE *fh, int ref_base4, int alts, const sample_data_t *s
         output_vcf_gt(fh, ref_base4, alts, s->genotype);
     }
 
-    /* DP, DP4, BCOUNT, GQ, JGQ, VAQ */
+    /* DP, DP4, BCOUNT, GQ */
     fprintf(fh, ":%d:%d,%d,%d,%d:%d,%d,%d,%d:%d:",
         s->dqstats.total_depth,
         s->dqstats.dp4[0],
@@ -104,12 +104,14 @@ void output_vcf_sample(FILE *fh, int ref_base4, int alts, const sample_data_t *s
         s->dqstats.base_occ[3], 
         s->consensus_quality
         );
+    /* JGQ */
     if(s->joint_genotype) {
         fprintf(fh, "%d:",s->joint_consensus_quality);
     }
     else {
         fputs(".:",fh);
     }
+    /* VAQ */
     fprintf(fh, "%d:", s->variant_allele_quality);
 
     /* BQ, MQ, TMQ */
