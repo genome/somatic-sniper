@@ -32,7 +32,7 @@ void usage(const char* progname, pu_data2_t* d) {
     fprintf(stderr, "        -f FILE   REQUIRED reference sequence in the FASTA format\n\n");
     fprintf(stderr, "Options: \n");
     fprintf(stderr, "        -q INT    filtering reads with mapping quality less than INT [%d]\n", d->mapQ);
-    fprintf(stderr, "        -Q INT    filtering somatic snv output with somatic quality less than  INT [15]\n");
+    fprintf(stderr, "        -Q INT    filtering somatic snv output with somatic quality less than  INT [%d]\n", d->min_somatic_qual);
     fprintf(stderr, "        -p FLAG   disable priors in the somatic calculation. Increases sensitivity for solid tumors\n");
     fprintf(stderr, "        -J FLAG   Use prior probabilities accounting for the somatic mutation rate\n");
     fprintf(stderr, "        -s FLOAT  prior probability of a somatic mutation (implies -J) [%f]\n",d->somatic_mutation_rate);
@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
     int c;
     const char *fn_fa = 0;
     pu_data2_t *d = (pu_data2_t*)calloc(1, sizeof(pu_data2_t));
-    d->min_somatic_qual=0;
+    d->min_somatic_qual=15;
     d->tid = -1; d->mask = BAM_DEF_MASK; d->mapQ = 0;
     d->c = sniper_maqcns_init();
     int use_priors = 1;
