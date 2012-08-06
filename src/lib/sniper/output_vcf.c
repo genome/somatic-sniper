@@ -6,7 +6,7 @@
 #include <time.h>
 
 /* vcf header fields */
-static const char *_vcf_format_string = "GT:IGT:DP:DP4:BCOUNT:GQ:JGQ:VAQ:BQ:MQ:TMQ:SS:SSC";
+static const char *_vcf_format_string = "GT:IGT:DP:DP4:BCOUNT:GQ:JGQ:VAQ:BQ:MQ:AMQ:SS:SSC";
 const static struct {
     const char *id;
     const char *number;
@@ -22,8 +22,8 @@ const static struct {
     { "JGQ", "1", "Integer", "Joint genotype quality (only filled if called in join prior mode)" },
     { "VAQ", "1", "Integer", "Variant allele quality" },
     { "BQ", ".", "Integer", "Average base quality" },
-    { "MQ", ".", "Integer", "Average mapping quality" },
-    { "TMQ", "1", "Integer", "Average mapping quality across all reads" },
+    { "MQ", "1", "Integer", "Average mapping quality across all reads" },
+    { "AMQ", ".", "Integer", "Average mapping quality for each allele present in the genotype" },
     { "SS", "1", "Integer",
         "Variant status relative to non-adjacent Normal, 0=wildtype,1=germline,2=somatic,3=LOH,4=unknown" },
     { "SSC", "1", "Integer", "Somatic Score" },
@@ -114,12 +114,12 @@ void output_vcf_sample(FILE *fh, int ref_base4, int alts, const sample_data_t *s
     /* VAQ */
     fprintf(fh, "%d:", s->variant_allele_quality);
 
-    /* BQ, MQ, TMQ */
+    /* BQ, MQ, GMQ */
     output_vcf_int4_masked(fh, s->dqstats.mean_baseQ, s->genotype);
     fputc(':', fh);
+    fprintf(fh, "%d:",s->dqstats.total_mean_mapQ);
     output_vcf_int4_masked(fh, s->dqstats.mean_mapQ, s->genotype);
     fputc(':', fh);
-    fprintf(fh, "%d:",s->dqstats.total_mean_mapQ);
 
     /* SS */
     fprintf(fh, "%d:", s->variant_status);

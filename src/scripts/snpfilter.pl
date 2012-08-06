@@ -126,7 +126,7 @@ while (my $snp = $snp_fh->getline) {
         my %format_keys = map { $_ => $tumor_fields[$index++] } split /:/,$format;
         $cns_qual = $format_keys{GQ};
         $snp_qual = $format_keys{VAQ};
-        $map_qual = $format_keys{TMQ};
+        $map_qual = $format_keys{MQ};
         $rd_depth = $format_keys{DP};
         $tumor_gt = $format_keys{GT};
         $somatic_status = $format_keys{SS};

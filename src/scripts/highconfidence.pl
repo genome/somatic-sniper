@@ -79,7 +79,7 @@ while (my $snp = $snp_fh->getline) {
         }
         @used_alleles = sort @used_alleles;
         my $aindex = 0;
-        my %mapq_for_allele = map { $used_alleles[$aindex++] => $_ } split /,/, $format_keys{MQ};
+        my %mapq_for_allele = map { $used_alleles[$aindex++] => $_ } split /,/, $format_keys{AMQ};
         delete $mapq_for_allele{$ref};
         $mean_tumor_mapq = join(",", values %mapq_for_allele);  #could be one for each alt. This is kind of inefficient but shouldn't matter too much
         $somatic_score = $format_keys{SSC};
