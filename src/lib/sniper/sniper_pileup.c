@@ -252,8 +252,9 @@ int bam_sspileup_file(bamFile fp1, bamFile fp2, int mask, int thresh, bam_sspile
                 //no more tumor data
                 while(buf2->tid < buf1->tid && (ret2 = get_next_pos(buf2, fp2)) >= 0);
             }
-        } while(buf2->tid != buf1->tid && buf2->pos != buf1->pos);  //removed assert and added this to hopefully deal with tids with no data
+        } while(buf2->tid != buf1->tid);
         if(ret1 && ret2) {
+            assert(buf1->tid == buf2->tid && buf1->pos == buf2->pos); //ensure we don't accidentally report results from desynced buffers
             func(buf1->tid, buf1->pos, ret1, ret2, buf1->pu, buf2->pu, buf1->func_data, snp_fh);
         }
     }
