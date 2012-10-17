@@ -5,6 +5,7 @@
 #include "sniper/sniper_maqcns.h"
 #include "sniper/somatic_sniper.h"
 #include "sniper/output_format.h"
+#include "version.h"
 
 #include <bam.h>
 #include <ctype.h>
@@ -15,6 +16,13 @@
 static const char *_default_normal_sample_id = "NORMAL";
 static const char *_default_tumor_sample_id = "TUMOR";
 static const char *_default_output_format = "classic";
+
+void version_info() {
+    printf("Somatic Sniper version (%s) (commit %s)", __g_prog_version, __g_commit_hash);
+    if (strlen(__g_build_type) > 0)
+        printf(" (%s)", __g_build_type);
+    printf("\n");
+}
 
 void usage(const char* progname, pu_data2_t* d) {
     /* we dont like basename(3) */
@@ -27,10 +35,12 @@ void usage(const char* progname, pu_data2_t* d) {
         ++pn;
 
     fprintf(stderr, "\n");
+    fprintf(stderr, "\n");
     fprintf(stderr, "%s [options] -f <ref.fasta> <tumor.bam> <normal.bam> <snp_output_file>\n\n", pn);
     fprintf(stderr, "Required Option: \n");
     fprintf(stderr, "        -f FILE   REQUIRED reference sequence in the FASTA format\n\n");
     fprintf(stderr, "Options: \n");
+    fprintf(stderr, "        -v        Display version information\n\n");
     fprintf(stderr, "        -q INT    filtering reads with mapping quality less than INT [%d]\n", d->mapQ);
     fprintf(stderr, "        -Q INT    filtering somatic snv output with somatic quality less than  INT [%d]\n", d->min_somatic_qual);
     fprintf(stderr, "        -p FLAG   disable priors in the somatic calculation. Increases sensitivity for solid tumors\n");
@@ -59,7 +69,7 @@ int main(int argc, char *argv[]) {
     d->somatic_mutation_rate = 0.01;
     const char *output_format = "classic";
 
-    while ((c = getopt(argc, argv, "f:T:N:r:I:G:q:Q:pJs:F:")) >= 0) {
+    while ((c = getopt(argc, argv, "vf:T:N:r:I:G:q:Q:pJs:F:")) >= 0) {
         switch (c) {
             case 'f': fn_fa = optarg; break;
             case 'T': d->c->theta = atof(optarg); break;
@@ -71,6 +81,7 @@ int main(int argc, char *argv[]) {
             case 'p': use_priors = 0; break;
             case 'J': d->use_joint_priors = 1; break;
             case 's': d->somatic_mutation_rate = atof(optarg); d->use_joint_priors = 1; break;                  
+            case 'v': version_info(); exit(0); break;
             default: fprintf(stderr, "Unrecognizd option '-%c'.\n", c); return 1;
         }
     }

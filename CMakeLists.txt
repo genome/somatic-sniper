@@ -13,7 +13,7 @@ include(ProjectHelper)
 set(EXE_VERSION_SUFFIX ${FULL_VERSION})
 
 configure_file(version/version.h.in version/version.h @ONLY)
-include_directories(version)
+include_directories(${PROJECT_BINARY_DIR}/version)
 
 message("SAMTOOLS_ROOT is set to: $ENV{SAMTOOLS_ROOT}")
 find_package(Samtools 0.1.6 REQUIRED)
