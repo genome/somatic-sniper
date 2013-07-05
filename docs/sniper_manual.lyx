@@ -391,6 +391,58 @@ Minimally, you must provide the program the reference fasta the bams were
 \end_layout
 
 \begin_layout Section*
+Basic filtering with provided Perl scripts
+\end_layout
+
+\begin_layout Standard
+A small number of basic Perl scripts are included in the SomaticSniper package
+ (located in src/scripts of the source code release) to aid in filtering
+ out likely false positives.
+ In order to get the recommended filtering you should do the following.
+ Defaults are set assuming that BWA short is the aligner used.
+ Other aligners have not been tested and recommendations are not available.
+ Before proceeding you will need to obtain and compile bam-readcount (https://gi
+thub.com/genome/bam-readcount).
+ You will also need to generate a samtools pileup (not mpileup) indel file.
+ Handling of indel containing VCFs is not implemented.
+\end_layout
+
+\begin_layout Enumerate
+Filter on standard filters using the indel file.
+ This will also remove LOH calls e.g.
+ perl snpfilter.pl --snp-file your_sniper_file --indel-file your_indel_pileup
+\end_layout
+
+\begin_layout Enumerate
+Adapt the remainder for use with bam-readcount e.g.
+ perl prepare_for_readcount.pl --snp-file your_sniper_file.SNPfilter
+\end_layout
+
+\begin_layout Enumerate
+Run bam-readcount (I'd recommend using the same mapping quality -q setting
+ as you ran SomaticSniper with) e.g.
+ bam-readcount -b 15 -f your_ref.fasta -l your_sniper_file.SNPfilter.pos your_tumor.
+bam > your_readcounts.rc
+\end_layout
+
+\begin_layout Enumerate
+Run the false positive filter e.g.
+ perl fpfilter.pl --snp-file your_sniper_file.SNPfilter --readcount-file your_read
+counts.rc
+\end_layout
+
+\begin_layout Enumerate
+Lastly, run the "high confidence" filter which filters based on the Somatic
+ Score and mapping quality e.g.
+ perl highconfidence.pl --snp-file your_sniper_file.SNPfilter.fp_pass
+\end_layout
+
+\begin_layout Standard
+Your final set of high confidence and highly filtered indels is now in the
+ file your_sniper_file.SNPfilter.fp_pass.hc
+\end_layout
+
+\begin_layout Section*
 File Formats
 \end_layout
 
@@ -1145,7 +1197,9 @@ User Support
 \end_layout
 
 \begin_layout Standard
-Please mail genome-dev@genome.wustl.edu with problems or questions.
+Please first search Biostar (http://www.biostars.org) and then ask a question
+ there if needed.
+ We automatically monitor Biostar for questions related to our tools.
 \end_layout
 
 \end_body
