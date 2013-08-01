@@ -50,6 +50,8 @@ void usage(const char* progname, pu_data2_t* d) {
     fprintf(stderr, "        -N INT    number of haplotypes in the sample (for -c/-g) [%d]\n", d->c->n_hap);
     fprintf(stderr, "        -r FLOAT  prior of a difference between two haplotypes (for -c/-g) [%f]\n", d->c->het_rate);
     fprintf(stderr, "        -F STRING select output format [%s]\n", _default_output_format);
+    fprintf(stderr, "        -n STRING normal sample id (for VCF header) [%s]\n", _default_normal_sample_id);
+    fprintf(stderr, "        -t STRING tumor sample id (for VCF header) [%s]\n", _default_tumor_sample_id);
     fprintf(stderr, "           Available formats:\n");
     for (i = 0; i < n_formats; ++i) {
         fprintf(stderr, "             %s\n", output_formatter_name(i));
@@ -59,6 +61,8 @@ void usage(const char* progname, pu_data2_t* d) {
 
 int main(int argc, char *argv[]) {
     int c;
+    const char* normal_sample_id = _default_normal_sample_id;
+    const char* tumor_sample_id = _default_tumor_sample_id;
     const char *fn_fa = 0;
     pu_data2_t *d = (pu_data2_t*)calloc(1, sizeof(pu_data2_t));
     d->min_somatic_qual=15;
@@ -69,7 +73,7 @@ int main(int argc, char *argv[]) {
     d->somatic_mutation_rate = 0.01;
     const char *output_format = "classic";
 
-    while ((c = getopt(argc, argv, "vf:T:N:r:I:G:q:Q:pJs:F:")) >= 0) {
+    while ((c = getopt(argc, argv, "n:t:vf:T:N:r:I:G:q:Q:pJs:F:")) >= 0) {
         switch (c) {
             case 'f': fn_fa = optarg; break;
             case 'T': d->c->theta = atof(optarg); break;
@@ -80,8 +84,10 @@ int main(int argc, char *argv[]) {
             case 'F': output_format = optarg; break;
             case 'p': use_priors = 0; break;
             case 'J': d->use_joint_priors = 1; break;
-            case 's': d->somatic_mutation_rate = atof(optarg); d->use_joint_priors = 1; break;                  
+            case 's': d->somatic_mutation_rate = atof(optarg); d->use_joint_priors = 1; break;
             case 'v': version_info(); exit(0); break;
+            case 't': tumor_sample_id = optarg; break;
+            case 'n': normal_sample_id = optarg; break;
             default: fprintf(stderr, "Unrecognizd option '-%c'.\n", c); return 1;
         }
     }
@@ -104,7 +110,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr,"Using priors accounting for somatic mutation rate. Prior probability of a somatic mutation is %f\n",d->somatic_mutation_rate);
         make_joint_prior(d->somatic_mutation_rate);
     }
- 
+
     sniper_maqcns_prepare(d->c);
     fprintf(stderr,"Preparing to snipe some somatics\n");
     if(use_priors) {
@@ -128,8 +134,8 @@ int main(int argc, char *argv[]) {
     if(snp_fh) {
         header_data_t hdr;
         hdr.refseq = fn_fa;
-        hdr.normal_sample_id = _default_normal_sample_id;
-        hdr.tumor_sample_id = _default_tumor_sample_id;
+        hdr.normal_sample_id = normal_sample_id;
+        hdr.tumor_sample_id = tumor_sample_id;
         d->output_formatter->header_fn(snp_fh, &hdr);
         bam_sspileup_file(fp1, fp2, d->mask, d->mapQ, glf_somatic, d, snp_fh);
     }
