@@ -49,9 +49,9 @@ void usage(const char* progname, pu_data2_t* d) {
     fprintf(stderr, "        -T FLOAT  theta in maq consensus calling model (for -c/-g) [%f]\n", d->c->theta);
     fprintf(stderr, "        -N INT    number of haplotypes in the sample (for -c/-g) [%d]\n", d->c->n_hap);
     fprintf(stderr, "        -r FLOAT  prior of a difference between two haplotypes (for -c/-g) [%f]\n", d->c->het_rate);
-    fprintf(stderr, "        -F STRING select output format [%s]\n", _default_output_format);
     fprintf(stderr, "        -n STRING normal sample id (for VCF header) [%s]\n", _default_normal_sample_id);
     fprintf(stderr, "        -t STRING tumor sample id (for VCF header) [%s]\n", _default_tumor_sample_id);
+    fprintf(stderr, "        -F STRING select output format [%s]\n", _default_output_format);
     fprintf(stderr, "           Available formats:\n");
     for (i = 0; i < n_formats; ++i) {
         fprintf(stderr, "             %s\n", output_formatter_name(i));
