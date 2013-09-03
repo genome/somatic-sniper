@@ -1,10 +1,6 @@
 h1. SomaticSniper
 
-p. The purpose of this program is to identify single nucleotide positions that
-are different between tumor and normal (or, in theory, any two bam files).
-It takes a tumor bam and a normal bam and compares the two to determine
-the differences. Complete documentation is available at the project
-"web site":http://gmt.genome.wustl.edu/somatic-sniper/ or in the included "pdf":https://github.com/genome/somatic-sniper/blob/master/docs/sniper_manual.pdf.
+p. The purpose of this program is to identify single nucleotide positions that are different between tumor and normal (or in theory, any two bam files). It takes a tumor bam and a normal bam and compares the two to determine the differences. Complete documentation is available at the project "web site":http://gmt.genome.wustl.edu/somatic-sniper/ or in the included "pdf":https://github.com/genome/somatic-sniper/blob/master/docs/sniper_manual.pdf.
 
 h2. Build Dependencies
 
@@ -15,25 +11,51 @@ h2. Build Dependencies
 
 h2. Build Instructions
 
+h3. Install dependencies
+
+* Install some packaged dependencies for RPM-based systems (Fedora, CentOS, RHEL):
+
+bc. sudo yum install curl gcc make cmake perl git samtools-devel zlib-devel
+
+* For APT-based systems (Debian, Ubuntu), install the following packages instead:
+
+bc. sudo apt-get install curl gcc make cmake perl git libbam-dev zlib1g-dev
+
 h3. Build Samtools
 
-* Download and extract samtools 0.1.6 to a directory of your choosing.
-* Enter that directory and run make
-* Set an environment variable called SAMTOOLS_ROOT to point to this directory. 
-** For example (if you are using bash), you can use @export SAMTOOLS_ROOT=`pwd`@ if you are still in the samtools directory or simply @export SAMTOOLS_ROOT=/path/to/samtools@ otherwise.
+* Download Samtools v0.1.6, unzip it, and enter the directory:
+
+bc. curl -LO http://sourceforge.net/projects/samtools/files/samtools/0.1.6/samtools-0.1.6.tar.bz2
+tar -jxvf samtools-0.1.6.tar.bz2
+cd samtools-0.1.6
+
+* This older Samtools had a bug in the @Makefile@. In line 39, you need to move @-lz@ to the end of the line. Like this:
+
+bc. $(CC) $(CFLAGS) -o $@ $(AOBJS) -lm $(LIBPATH) $(LIBCURSES) -L. -lbam -lz
+
+* Build Samtools v0.1.6 and store this path in an environment variable called @SAMTOOLS_ROOT@:
+
+bc. make
+export SAMTOOLS_ROOT=`pwd`
+cd ..
 
 h3. Clone the SomaticSniper repository
-* Recursively clone the git repository
 
-bc..         git clone --recursive git://github.com/genome/somatic-sniper.git
+Recursively clone the git repository
 
-h3. Compile SomaticSniper
-* SomaticSniper does not support in source builds. Create a new build directory, enter it, and run:
+bc. git clone --recursive git://github.com/genome/somatic-sniper.git
 
-bc..         cmake /path/to/somatic-sniper/repo
-        make
+h3. Build SomaticSniper
 
-p. The binary can then be found in the bin/ subdirectory of your build directory.
+SomaticSniper does not support in-source builds. So create a subdirectory, enter it, build, and run tests:
+
+bc. mkdir somatic-sniper/build
+cd somatic-sniper/build
+cmake ../
+make
+make test
+
+The binary @bam-somaticsniper@ can then be found under @somatic-sniper/build/bin@. If you have administrative rights, then run @sudo make install@ to install the tool for all users under @/usr/bin@.
 
 h2. FAQ
 
