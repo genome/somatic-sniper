@@ -11,7 +11,7 @@ function have_program() {
     prog=$1
     pkg_suggestion=$2
     prog_path=`which $prog`
-    if [ -z "$prog_path" -o ! -x $prog_path ]
+    if [ -z "$prog_path" ] || [ ! -x "$prog_path" ]
     then
         echo "Failed to find required program $prog!"
         if [ ! -z "$pkg_suggestion" ]
