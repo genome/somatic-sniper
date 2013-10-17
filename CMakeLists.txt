@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 project(somatic_sniper)
 
 set(CMAKE_INSTALL_PREFIX "/usr")
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/build-common/cmake")
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_SOURCE_DIR}/build-common/cmake")
 include(TestHelper)
 include(VersionHelper)
 include(ProjectHelper)
@@ -15,8 +15,7 @@ set(EXE_VERSION_SUFFIX ${FULL_VERSION})
 configure_file(version/version.h.in version/version.h @ONLY)
 include_directories(${PROJECT_BINARY_DIR}/version)
 
-message("SAMTOOLS_ROOT is set to: $ENV{SAMTOOLS_ROOT}")
-find_package(Samtools 0.1.6 REQUIRED)
+include(BuildSamtools)
 include_directories(${Samtools_INCLUDE_DIRS})
 
 # on linux mint 12, libgtest requires pthreads, so link thread libraries
