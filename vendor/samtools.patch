@@ -1,0 +1,12 @@
+diff -Nuar a/Makefile b/Makefile
+--- a/Makefile	2009-08-01 13:13:15.000000000 -0500
++++ b/Makefile	2013-10-22 16:14:08.956111375 -0500
+@@ -36,7 +36,7 @@
+ 		$(AR) -cru $@ $(LOBJS)
+ 
+ samtools:lib $(AOBJS)
+-		$(CC) $(CFLAGS) -o $@ $(AOBJS) -lm $(LIBPATH) $(LIBCURSES) -lz -L. -lbam
++		$(CC) $(CFLAGS) -o $@ $(AOBJS) -lm $(LIBPATH) $(LIBCURSES) -L. -lbam -lz
+ 
+ razip:razip.o razf.o
+ 		$(CC) $(CFLAGS) -o $@ razf.o razip.o -lz
