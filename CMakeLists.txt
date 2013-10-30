@@ -18,6 +18,9 @@ include_directories(${PROJECT_BINARY_DIR}/version)
 include(BuildSamtools)
 include_directories(${Samtools_INCLUDE_DIRS})
 
+add_custom_target(deps ALL)
+add_dependencies(deps samtools-lib)
+
 # on linux mint 12, libgtest requires pthreads, so link thread libraries
 # everywhere
 find_package(Threads)
