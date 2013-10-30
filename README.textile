@@ -18,9 +18,9 @@ bc. sudo apt-get build-essential git-core cmake zlib1g-dev libncurses-dev
 * For RPM-based systems (Fedora, CentOS, RHEL), install the following packages instead:
 
 bc. sudo yum groupinstall "Development tools" 
-sudo yum install zlib-devel ncurses-devel
+sudo yum install zlib-devel ncurses-devel cmake
 
-Note that you will need to install cmake 2.8 or greater yourself on RPM based systems as the default version is much older.
+Note that for some RPM based systems (like RHEL), you will need to install cmake 2.8 or greater yourself as the packaged version is much older.
 
 h3. Clone the SomaticSniper repository
 
