@@ -6,38 +6,19 @@ h2. Build Dependencies
 
 * git
 * cmake 2.8+ ("cmake.org":http://cmake.org)
-* samtools 0.1.6 ("sourceforge download page":http://sourceforge.net/projects/samtools/files/samtools/0.1.6/)
-** Newer versions will NOT work with SomaticSniper
 
 h2. Build Instructions
 
-h3. Install dependencies
+h3. Build dependencies
 
-* Install some packaged dependencies for RPM-based systems (Fedora, CentOS, RHEL):
+* For APT-based systems (Debian, Ubuntu), install the following packages:
 
-bc. sudo yum install curl gcc make cmake perl git samtools-devel zlib-devel
+bc. sudo apt-get build-essential git-core cmake zlib1g-dev libncurses-dev
 
-* For APT-based systems (Debian, Ubuntu), install the following packages instead:
+* For RPM-based systems (Fedora, CentOS, RHEL), install the following packages instead:
 
-bc. sudo apt-get install curl gcc make cmake perl git libbam-dev zlib1g-dev
-
-h3. Build Samtools
-
-* Download Samtools v0.1.6, unzip it, and enter the directory:
-
-bc. curl -LO http://sourceforge.net/projects/samtools/files/samtools/0.1.6/samtools-0.1.6.tar.bz2
-tar -jxvf samtools-0.1.6.tar.bz2
-cd samtools-0.1.6
-
-* This older Samtools had a bug in the @Makefile@. In line 39, you need to move @-lz@ to the end of the line. Like this:
-
-bc. $(CC) $(CFLAGS) -o $@ $(AOBJS) -lm $(LIBPATH) $(LIBCURSES) -L. -lbam -lz
-
-* Build Samtools v0.1.6 and store this path in an environment variable called @SAMTOOLS_ROOT@:
-
-bc. make
-export SAMTOOLS_ROOT=`pwd`
-cd ..
+bc. sudo yum groupinstall "Development tools" 
+sudo yum install zlib-devel ncurses-devel
 
 h3. Clone the SomaticSniper repository
 
@@ -52,7 +33,8 @@ SomaticSniper does not support in-source builds. So create a subdirectory, enter
 bc. mkdir somatic-sniper/build
 cd somatic-sniper/build
 cmake ../
-make
+make deps
+make -j
 make test
 
 The binary @bam-somaticsniper@ can then be found under @somatic-sniper/build/bin@. If you have administrative rights, then run @sudo make install@ to install the tool for all users under @/usr/bin@.
@@ -61,7 +43,7 @@ h2. FAQ
 
 h3. I get lots of compile errors indicating that files are missing. How do I fix this?
 
-SomaticSniper requires that it be linked to an old version of samtools (v0.1.6). This typically happens because you have attempted to link to a newer version.
+SomaticSniper requires that it be linked to an old version of samtools (v0.1.6). This typically happens because you have attempted to link to a newer version. As of version 1.0.3, SomaticSniper will take care of this during the compilation process.
 
 h3. I get errors from cmake about missing modules. How do I fix this?
 
