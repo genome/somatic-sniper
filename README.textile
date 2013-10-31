@@ -13,7 +13,7 @@ h3. Build dependencies
 
 * For APT-based systems (Debian, Ubuntu), install the following packages:
 
-bc. sudo apt-get build-essential git-core cmake zlib1g-dev libncurses-dev
+bc. sudo apt-get install build-essential git-core cmake zlib1g-dev libncurses-dev
 
 * For RPM-based systems (Fedora, CentOS, RHEL), install the following packages instead:
 
