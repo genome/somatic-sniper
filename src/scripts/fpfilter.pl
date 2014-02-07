@@ -34,7 +34,7 @@ my $min_var_dist_3 = 0.2;
 
 ## Parse arguments ##
 
-my ( $output_file, $var_file, $readcount_file, $help );
+my ( $var_file, $readcount_file, $output_file, $help );
 my $opt_result = GetOptions(
     'var-file=s' => \$var_file,
     'readcount-file=s' => \$readcount_file,
@@ -113,9 +113,9 @@ while( my $line = $input_fh->getline ) {
     # We'll only need the chromosome name, genomic position, and ref/var alleles from input
     my ( $chrom, $position, $ref, $var );
     if( $input_is_vcf ) {
-        # Follow existing convention of alphabetical order to choose from alternate alleles
+        # Follow convention of choosing the first of listed alternate alleles
         ( $chrom, $position, undef, $ref, my $alt ) = @fields[0..4];
-        ( $var ) = sort split( /,/, $alt );
+        ( $var ) = split( /,/, $alt );
     }
     else {
         ( $chrom, $position, $ref, $var ) = @fields;
@@ -360,7 +360,7 @@ sub read_counts_by_allele {
 sub help_text {
     return <<HELP;
 
-fpfilter.pl - Advanced filtering for variant calls
+fpfilter.pl - Advanced filtering for point mutations
 
 SYNOPSIS
 perl fpfilter.pl [options] [file ...]
@@ -390,7 +390,7 @@ The output file is tab-delimited and contains a column with a filter tag that ca
 AUTHORS
 Dan Koboldt     Original code
 Dave Larson     Modification specifically for bam-somaticsniper
-Cyriac Kandoth  Fixed allele-fraction, improved docs, support for generic VCFs, and for MNPs/indels
+Cyriac Kandoth  Fixed allele-fraction, improved docs, support for generic VCFs
 
 SUPPORT
 Please visit BioStars.org to see if your question was asked before. Else, post a new question, tag it with appropriate keywords, and the authors will find it.
