@@ -1,388 +1,346 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use warnings;
 use strict;
-
 use Getopt::Long;
 use IO::File;
 
-
-
-
 ## Define filtering parameters ##
 
+# Minimum required depth to call a variant with confidence
+my $min_depth = 8;
+
+# Minimums for variant allele fraction, and the number of variant-supporting reads
+my $min_var_frac = 0.05;
+my $min_var_count = 3;
+
+# Minimum avg relative distance of variant from start/end of read
 my $min_read_pos = 0.10;
-my $max_read_pos = 1 - $min_read_pos;
-my $min_var_freq = 0.05;
-my $min_var_count = 4;
 
+# Minimum representation of variant allele on each strand
 my $min_strandedness = 0.01;
-my $max_strandedness = 1 - $min_strandedness;
 
-my $max_mm_qualsum_diff = 50;
+# Maximum difference of mismatch quality sum between var/ref reads (paralog filter)
+my $max_mmqs_diff = 50;
+
+# Maximum mismatch quality sum of reference-supporting reads
+my $max_var_mmqs = 100;
+
+# Maximum difference of mapping quality between variant and reference reads
 my $max_mapqual_diff = 30;
-my $max_readlen_diff = 25;
-my $min_var_dist_3 = 0.20;
-my $max_var_mm_qualsum = 100;
 
+# Maximum difference of average supporting read length between variant and reference reads (paralog filter)
+my $max_readlen_diff = 25;
+
+# Minimum average distance to effective 3prime end of read (real end or Q2) for variant-supporting reads
+my $min_var_dist_3 = 0.2;
 
 ## Parse arguments ##
 
-my $output_basename;
-my $verbose = 0;
-
-my $snp_file;
-my $readcount_file;
-my $help;
-
-
-my $opt_result;
-
-$opt_result = GetOptions(
-    'snp-file=s' => \$snp_file,
+my ( $var_file, $readcount_file, $output_file, $help );
+my $opt_result = GetOptions(
+    'var-file=s' => \$var_file,
     'readcount-file=s' => \$readcount_file,
-    'output-basename=s'   => \$output_basename,
-    'verbose=s'   => \$verbose,
+    'output-file=s' => \$output_file,
+    'min-depth=f' => \$min_depth,
     'min-read-pos=f' => \$min_read_pos,
-    'max-read-pos=f' => \$max_read_pos,
-    'min-var-freq=f' => \$min_var_freq,
-    'min-var-count=f' => \$min_var_count,
     'min-strandedness=f' => \$min_strandedness,
-    'max-strandedness=f' => \$max_strandedness,
-    'max-mm-qualsum-diff=f' => \$max_mm_qualsum_diff,
+    'min-var-count=f' => \$min_var_count,
+    'min-var-frac=f' => \$min_var_frac,
+    'max-mmqs-diff=f' => \$max_mmqs_diff,
     'max-mapqual-diff=f' => \$max_mapqual_diff,
     'max-readlen-diff=f' => \$max_readlen_diff,
     'min-var-dist-3=f' => \$min_var_dist_3,
-    'max_var_mm_qualsum=f' => \$max_var_mm_qualsum,
+    'max-var-mmqs=f' => \$max_var_mmqs,
     'help' => \$help,
-);
+) or die help_text();
 
-unless($opt_result) {
-    die help_text();
-}
-
-if($help) {
-    print STDOUT help_text();
+# If help text was explicitly requested, print it to STDOUT rather than STDERR
+if( $help ) {
+    print help_text();
     exit 0;
 }
 
-unless($snp_file) {
-    warn "You must provide a file to be filtered\n";
+# Make sure input files are properly defined and non-empty
+unless( $var_file and $readcount_file ) {
+    warn "var-file and readcount-file are required arguments!\n";
     die help_text();
 }
+die "Variant file not found, or is empty: $var_file\n" unless( -s $var_file );
+die "Readcount file not found, or is empty: $readcount_file\n" unless( -s $readcount_file );
 
-unless(-s $snp_file) {
-    die "Can not find valid bam-somaticsniper output file: $snp_file\n";
-}
+# If output file is undefined, use the input filename as a prefix
+$output_file = "$var_file.fpfilter" unless( defined $output_file );
 
-unless($readcount_file) {
-    warn "You must provide a bam-readcount output file to use for filtering\n";
-    die help_text();
-}
-
-unless(-s $readcount_file) {
-    die "Can not find valid bam-readcount output file: $readcount_file\n";
-}
-
-$output_basename ||= $snp_file;
-
-my %stats = ();
-$stats{'num_variants'} = $stats{'num_fail_pos'} = $stats{'num_fail_strand'} = $stats{'num_fail_varcount'} = $stats{'num_fail_varfreq'} = $stats{'num_fail_mmqs'} = $stats{'num_fail_var_mmqs'} = $stats{'num_fail_mapqual'} = $stats{'num_fail_readlen'} = $stats{'num_fail_dist3'} = $stats{'num_pass_filter'} = $stats{'num_no_readcounts'} = 0;
-
-## Load the read counts ##
+## Load the read counts into a hash for quick lookup ##
 
 my %readcounts_by_position = ();
-
-my $rc_input = IO::File->new($readcount_file) or die "Unable to open $readcount_file for reading: $!\n";
-my $lineCounter = 0;
-
-while (<$rc_input>)
-{
-    chomp;
-    my $line = $_;
-    $lineCounter++;
-    my ($chrom, $position) = split(/\t/, $line);
+my $rc_fh = IO::File->new( $readcount_file ) or die "Can't open file $readcount_file: $!\n";
+while( my $line = $rc_fh->getline ) {
+    chomp( $line );
+    my ( $chrom, $position ) = split( /\t/, $line );
     $readcounts_by_position{"$chrom\t$position"} = $line;
 }
+$rc_fh->close;
 
-close($rc_input);
+## Parse the input file and write pass/fail status to output file ##
 
+my $input_fh = new IO::File->new( $var_file ) or die "Can't open file $var_file: $!\n";
 
-## Open the output files ##
+# Open the output file for writing, and write a header line with column names
+my $output_fh = IO::File->new( $output_file, "w" ) or die "Can't open file $output_file: $!\n";
+$output_fh->print( "#CHROM\tPOS\tREF\tVAR\tDEPTH\tRAF\tVAF\tFILTER\tFILTER_DETAILS\n" );
 
-my $pass_fh = IO::File->new("$output_basename.fp_pass","w") or die "Can't open output file $output_basename.fp_pass: $!\n";
-my $fail_fh = IO::File->new("$output_basename.fp_fail","w") or die "Can't open output file $output_basename.fp_fail: $!\n";
+# Initialize all variant fail/pass counters to zero
+my %stats = map{($_,0)} qw( num_variants num_fail_depth num_fail_pos num_fail_strand num_fail_varcount
+    num_fail_varfrac num_fail_mmqs num_fail_var_mmqs num_fail_mapqual num_fail_readlen
+    num_fail_dist3 num_no_readcounts num_pass_filter );
 
-## Parse the input file ##
+my $input_is_vcf = undef;
+while( my $line = $input_fh->getline ) {
 
+    # Skip blank lines
+    next if( $line =~ m/^\s*$/ );
 
-my $input = new IO::File->new($snp_file) or die "Unable to open input file $snp_file: $!\n";
-$lineCounter = 0;
-my $sniper_vcf = 0;
-
-while (my $line = $input->getline)
-{
-    if($line =~ /^##fileformat=VCF/) {   #not checking version. Note that this also doesn't attempt to verify that this is a sniper output file.
-        $sniper_vcf = 1;
+    # If the first non-blank line in the file is a VCF version tag, then remember that this as a VCF
+    unless( defined $input_is_vcf ) {
+        $input_is_vcf = 0;
+        $input_is_vcf = 1 if( $line =~ /^##fileformat=VCF/ );
     }
-    if($line =~ /^#/) {   #pass through VCF comments etc
-        print $pass_fh $line;
-        next;
-    }
 
-    chomp $line;
-    $lineCounter++;
-    my @fields = split("\t", $line);
-    my ($chrom, $position, $ref, $var);
-    if($sniper_vcf) {
-        my ($alt, $format, $tumor_sample);
-        ($chrom, $position, $ref,$alt,$format, $tumor_sample) = @fields[0,1,3,4,8,10];
-        my @tumor_fields = split /:/, $tumor_sample;
-        my $index = 0;
-        my %format_keys = map { $_ => $tumor_fields[$index++] } split /:/,$format;
-        #these are in order ACGT
-        my @alleles = ($ref, split /,/, $alt);
-        my %gt_alleles = map {$_ => 1} grep { $_ > 0 } split /\//, $format_keys{GT};
-        my @used_alleles;
-        for my $allele_index (keys %gt_alleles) {
-            push @used_alleles, $alleles[$allele_index];
-        }
-        ($var) = sort @used_alleles; #follow existing convention of fp filter using alphabetical order to choose a single base on triallelic sites
+    # Skip comment lines
+    next if( $line =~ /^#/ );
+
+    chomp( $line );
+    my @fields = split( "\t", $line );
+
+    # We'll only need the chromosome name, genomic position, and ref/var alleles from input
+    my ( $chrom, $position, $ref, $var );
+    if( $input_is_vcf ) {
+        # Follow convention of choosing the first of listed alternate alleles
+        ( $chrom, $position, undef, $ref, my $alt ) = @fields[0..4];
+        ( $var ) = split( /,/, $alt );
     }
     else {
-        ($chrom, $position, $ref, $var) = @fields[0,1,2,3];
+        ( $chrom, $position, $ref, $var ) = @fields;
     }
-    $ref = uc($ref);
-    $var = uc($var);
+    $ref = uc( $ref );
+    $var = uc( $var );
 
-    if(!($var =~ /[ACGT]/)) {
-        $var = iupac_to_base($ref, $var);
+    # If the variant allele isn't all ACGTs then it likely contains IUPAC codes that need conversion
+    if( $var !~ /^[ACGT]+$/ ) {
+        $var = join( "", map{iupac_to_base( $ref, $_ )} split( //, $var ));
     }
 
+    # Accumulate the total number of variants, for the final summarized report
     $stats{'num_variants'}++;
 
-    if($readcounts_by_position{"$chrom\t$position"})
-    {
+    # Proceed only if readcounts are available for this position
+    if( $readcounts_by_position{"$chrom\t$position"} ) {
         my $readcounts = $readcounts_by_position{"$chrom\t$position"};
-        my $ref_result = read_counts_by_allele($readcounts, $ref);
-        my $var_result = read_counts_by_allele($readcounts, $var);
+        my $ref_result = read_counts_by_allele( $readcounts, $ref );
+        my $var_result = read_counts_by_allele( $readcounts, $var );
 
-        if($ref_result && $var_result)
-        {
-            ## Parse out the bam-readcounts details for each allele. The fields should be: ##
-            #num_reads : avg_mapqual : avg_basequal : avg_semq : reads_plus : reads_minus : avg_clip_read_pos : avg_mmqs : reads_q2 : avg_dist_to_q2 : avgRLclipped : avg_eff_3'_dist
-            my ($ref_count, $ref_map_qual, $ref_base_qual, $ref_semq, $ref_plus, $ref_minus, $ref_pos, $ref_subs, $ref_mmqs, $ref_q2_reads, $ref_q2_dist, $ref_avg_rl, $ref_dist_3) = split(/\t/, $ref_result);
-            my ($var_count, $var_map_qual, $var_base_qual, $var_semq, $var_plus, $var_minus, $var_pos, $var_subs, $var_mmqs, $var_q2_reads, $var_q2_dist, $var_avg_rl, $var_dist_3) = split(/\t/, $var_result);
+        # Proceed only if readcounts are available for reference and variant alleles
+        if( $ref_result && $var_result ) {
+            # Parse out the bam-readcounts details for each allele. The fields should be in this order:
+            # total_reads : num_reads : avg_mapqual : avg_basequal : avg_semq : reads_plus : reads_minus :
+            # avg_clip_read_pos : avg_mmqs : reads_q2 : avg_dist_to_q2 : avgRLclipped : avg_eff_3'_dist
+            my ( $total_depth, $ref_count, $ref_map_qual, $ref_base_qual, $ref_semq, $ref_plus, $ref_minus, $ref_pos,
+                $ref_subs, $ref_mmqs, $ref_q2_reads, $ref_q2_dist, $ref_avg_rl, $ref_dist_3 ) = split( /\t/, $ref_result );
+            my ( undef, $var_count, $var_map_qual, $var_base_qual, $var_semq, $var_plus, $var_minus, $var_pos,
+                $var_subs, $var_mmqs, $var_q2_reads, $var_q2_dist, $var_avg_rl, $var_dist_3 ) = split( /\t/, $var_result );
 
-            my $ref_strandedness = my $var_strandedness = 0.50;
-            $ref_dist_3 = 0.5 if(!$ref_dist_3);
-
-            ## Use conservative defaults if we can't get mismatch quality sums ##
-            $ref_mmqs = 50 if(!$ref_mmqs);
-            $var_mmqs = 0 if(!$var_mmqs);
+            # Set conservative defaults if read positions or mismatch quality sums are not available
+            $ref_dist_3 = 0.5 unless( $ref_dist_3 );
+            $ref_mmqs = 50 unless( $ref_mmqs );
+            $var_mmqs = 0 unless( $var_mmqs );
             my $mismatch_qualsum_diff = $var_mmqs - $ref_mmqs;
 
-            ## Determine map qual diff ##
-
+            # Determine map qual diff between ref/var reads
             my $mapqual_diff = $ref_map_qual - $var_map_qual;
 
-
-            ## Determine difference in average supporting read length ##
-
+            # Determine difference in average supporting read length
             my $readlen_diff = $ref_avg_rl - $var_avg_rl;
 
+            # Set max strandedness cutoff
+            my $max_strandedness = 1 - $min_strandedness;
 
-            ## Determine ref strandedness ##
+            # Set conservative default values for reference and variant strandedness
+            my ( $ref_strandedness, $var_strandedness ) = ( 0.5, 0.5 );
 
-            if(($ref_plus + $ref_minus) > 0) {
-                $ref_strandedness = $ref_plus / ($ref_plus + $ref_minus);
-                $ref_strandedness = sprintf("%.2f", $ref_strandedness);
+            # Determine reference strandedness
+            if(( $ref_plus + $ref_minus ) > 0 ) {
+                $ref_strandedness = $ref_plus / ( $ref_plus + $ref_minus );
+                $ref_strandedness = sprintf( "%.2f", $ref_strandedness );
             }
 
-            ## Determine var strandedness ##
-
-            if(($var_plus + $var_minus) > 0) {
-                $var_strandedness = $var_plus / ($var_plus + $var_minus);
-                $var_strandedness = sprintf("%.2f", $var_strandedness);
+            # Determine variant strandedness
+            if(( $var_plus + $var_minus ) > 0 ) {
+                $var_strandedness = $var_plus / ( $var_plus + $var_minus );
+                $var_strandedness = sprintf( "%.2f", $var_strandedness );
             }
 
-            if($var_count && ($var_plus + $var_minus))
-            {
-                ## We must obtain variant read counts to proceed ##
+            # Determine reference/variant allele fractions, and add as columns for output
+            my $raf = sprintf( "%.4f", $total_depth ? $ref_count/$total_depth : 0 );
+            my $vaf = sprintf( "%.4f", $total_depth ? $var_count/$total_depth : 0 );
+            $line = "$chrom\t$position\t$ref\t$var\t$total_depth\t$raf\t$vaf";
 
-                my $var_freq = $var_count / ($ref_count + $var_count);
+            ## We must have non-zero variant read counts to proceed ##
+            if( $var_count && ( $var_plus + $var_minus )) {
 
-                ## FAILURE 1: READ POSITION ##
-                if(($var_pos < $min_read_pos)) { # || $var_pos > $max_read_pos)) {
-                    print $fail_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadPos<$min_read_pos\n";
-                    print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadPos<$min_read_pos\n"if ($verbose);
+                ## FAILURE: Average distance of variant from clipped read ends ##
+                if($var_pos < $min_read_pos) {
+                    $line .= "\tReadPos\t$var_pos < $min_read_pos\n";
                     $stats{'num_fail_pos'}++;
                 }
 
-                ## FAILURE 2: Variant is strand-specific but reference is NOT strand-specific ##
-                elsif(($var_strandedness < $min_strandedness || $var_strandedness > $max_strandedness) && ($ref_strandedness >= $min_strandedness && $ref_strandedness <= $max_strandedness)) {
+                ## FAILURE: Variant is strand-specific but reference is NOT strand-specific ##
+                elsif(($var_strandedness < $min_strandedness || $var_strandedness > $max_strandedness) &&
+                    ($ref_strandedness >= $min_strandedness && $ref_strandedness <= $max_strandedness)) {
                     ## Print failure to output file if desired ##
-                    print $fail_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tStrandedness: Ref=$ref_strandedness Var=$var_strandedness\n";
-                    print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tStrandedness: Ref=$ref_strandedness Var=$var_strandedness\n"if ($verbose);
+                    $line .= "\tStrandedness\tRef=$ref_strandedness,Var=$var_strandedness,MinMax=[$min_strandedness,$max_strandedness]\n";
                     $stats{'num_fail_strand'}++;
                 }
 
-                ## FAILURE : Variant allele count does not meet minimum ##
+                ## FAILURE: Variant allele count does not meet minimum ##
                 elsif($var_count < $min_var_count) {
-                    print $fail_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarCount:$var_count\n";
-                    print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarCount:$var_count\n" if ($verbose);
+                    $line .= "\tVarCount\t$var_count < $min_var_count\n";
                     $stats{'num_fail_varcount'}++;
                 }
 
-                ## FAILURE : Variant allele frequency does not meet minimum ##
-                elsif($var_freq < $min_var_freq) {
-                    print $fail_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarFreq:$var_freq\n";
-                    print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarFreq:$var_freq\n" if ($verbose);
-                    $stats{'num_fail_varfreq'}++;
+                ## FAILURE: Read depth is too low to proceed onto next few filters ##
+                elsif($total_depth < $min_depth) {
+                    $line .= "\tLowDepth\t$total_depth < $min_depth\n";
+                    $stats{'num_fail_depth'}++;
                 }
 
-                ## FAILURE 3: Paralog filter for sites where variant allele mismatch-quality-sum is significantly higher than reference allele mmqs
-                elsif($mismatch_qualsum_diff> $max_mm_qualsum_diff) {
+                ## FAILURE: Variant allele fraction does not meet minimum ##
+                elsif($vaf < $min_var_frac) {
+                    $line .= "\tVarFrac\t$vaf < $min_var_frac\n";
+                    $stats{'num_fail_varfrac'}++;
+                }
+
+                ## FAILURE: Paralog filter for sites where variant allele mismatch-quality-sum is significantly higher than the reference allele MMQS
+                elsif( $mismatch_qualsum_diff > $max_mmqs_diff ) {
                     ## Print failure to output file if desired ##
-                    print $fail_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMismatchQualsum:$var_mmqs-$ref_mmqs=$mismatch_qualsum_diff\n";
-                    print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMismatchQualsum:$var_mmqs-$ref_mmqs=$mismatch_qualsum_diff" if ($verbose);
+                    $line .= "\tMismatchQualsum\t$var_mmqs-$ref_mmqs=$mismatch_qualsum_diff > $max_mmqs_diff\n";
                     $stats{'num_fail_mmqs'}++;
                 }
 
-                ## FAILURE 4: Mapping quality difference exceeds allowable maximum ##
+                ## FAILURE: Mapping quality difference exceeds allowable maximum ##
                 elsif($mapqual_diff > $max_mapqual_diff) {
-                    print $fail_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMapQual:$ref_map_qual-$var_map_qual=$mapqual_diff\n";
-                    print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMapQual:$ref_map_qual-$var_map_qual=$mapqual_diff" if ($verbose);
+                    $line .= "\tMapQual\t$ref_map_qual-$var_map_qual=$mapqual_diff > $max_mapqual_diff\n";
                     $stats{'num_fail_mapqual'}++;
                 }
 
-                ## FAILURE 5: Read length difference exceeds allowable maximum ##
-                elsif($readlen_diff > $max_readlen_diff) {
-                    print $fail_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadLen:$ref_avg_rl-$var_avg_rl=$readlen_diff\n";
-                    print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadLen:$ref_avg_rl-$var_avg_rl=$readlen_diff" if ($verbose);
+                ## FAILURE: Read length difference exceeds allowable maximum ##
+                elsif( $readlen_diff > $max_readlen_diff ) {
+                    $line .= "\tReadLen\t$ref_avg_rl-$var_avg_rl=$readlen_diff > $max_readlen_diff\n";
                     $stats{'num_fail_readlen'}++;
                 }
 
-                ## FAILURE 5: Read length difference exceeds allowable maximum ##
-                elsif($var_dist_3 < $min_var_dist_3) {
-                    print $fail_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarDist3:$var_dist_3\n";
-                    print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarDist3:$var_dist_3\n" if ($verbose);
+                ## FAILURE: Avg distance from 3' ends of reads is lower than allowed minimum ##
+                elsif( $var_dist_3 < $min_var_dist_3 ) {
+                    $line .= "\tVarDist3\t$var_dist_3 < $min_var_dist_3\n";
                     $stats{'num_fail_dist3'}++;
                 }
 
-                elsif($max_var_mm_qualsum && $var_mmqs > $max_var_mm_qualsum) {
-                    print $fail_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarMMQS: $var_mmqs > $max_var_mm_qualsum\n";
-                    print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarMMQS: $var_mmqs > $max_var_mm_qualsum\n" if ($verbose);
+                ## FAILURE: Mismatch quality sum indicative of errors from misalignment ##
+                elsif( $var_mmqs > $max_var_mmqs ) {
+                    $line .= "\tVarMMQS\t$var_mmqs > $max_var_mmqs\n";
                     $stats{'num_fail_var_mmqs'}++;
                 }
 
-                ## SUCCESS: Pass Filter ##
+                ## SUCCESS: Passes all filters above ##
                 else {
+                    $line .= "\tPASS\t.\n";
                     $stats{'num_pass_filter'}++;
-                    ## Print output, and append strandedness information ##
-                    print $pass_fh "$line\n";
-                    print "$line\tPASS\n" if($verbose);
                 }
-
+            }
+            else {
+                $line .= "\tNoVariantReads\t.\n";
+                $stats{'num_no_readcounts'}++;
             }
         }
-        else
-        {
+        else {
+            $line = "$chrom\t$position\t$ref\t$var\t0\t0\t0\tNoReadCounts\t.\n";
             $stats{'num_no_readcounts'}++;
-            print $fail_fh "$line\tno_readcounts\n";
         }
     }
-    else
-    {
+    else {
+        $line = "$chrom\t$position\t$ref\t$var\t0\t0\t0\tNoReadCounts\t.\n";
         $stats{'num_no_readcounts'}++;
-        print $fail_fh "$line\tno_readcounts\n";
     }
 
-
+    # Print to output file along with filter status and additional information
+    $output_fh->print( $line );
 }
 
-close($input);
-
-close($pass_fh);
-close($fail_fh);
+$input_fh->close;
+$output_fh->close;
 
 ## Print filtering stats ##
 
 print $stats{'num_variants'} . " variants\n";
 print $stats{'num_no_readcounts'} . " failed to get readcounts for variant allele\n";
-print $stats{'num_fail_pos'} . " had read position < $min_read_pos\n";
-print $stats{'num_fail_strand'} . " had strandedness < $min_strandedness\n";
-print $stats{'num_fail_varcount'} . " had var_count < $min_var_count\n";
-print $stats{'num_fail_varfreq'} . " had var_freq < $min_var_freq\n";
-
-print $stats{'num_fail_mmqs'} . " had mismatch qualsum difference > $max_mm_qualsum_diff\n";
-print $stats{'num_fail_var_mmqs'} . " had variant MMQS > $max_var_mm_qualsum\n" if($stats{'num_fail_var_mmqs'});
+print $stats{'num_fail_pos'} . " were near the ends of the supporting reads (position < $min_read_pos)\n";
+print $stats{'num_fail_strand'} . " had strandedness < $min_strandedness (most supporting reads are in the same direction)\n";
+print $stats{'num_fail_varcount'} . " had var_count < $min_var_count (not enough supporting reads)\n";
+print $stats{'num_fail_depth'} . " had depth < $min_depth\n";
+print $stats{'num_fail_varfrac'} . " had var_frac < $min_var_frac (low-fraction variants are likely artifacts or from crosstalk between samples in the same lane)\n";
+print $stats{'num_fail_mmqs'} . " had mismatch qualsum difference > $max_mmqs_diff (likely a result of paralogous misalignments)\n";
+print $stats{'num_fail_var_mmqs'} . " had variant MMQS > $max_var_mmqs (likely a result of paralogous misalignments)\n" if($stats{'num_fail_var_mmqs'});
 print $stats{'num_fail_mapqual'} . " had mapping quality difference > $max_mapqual_diff\n";
 print $stats{'num_fail_readlen'} . " had read length difference > $max_readlen_diff\n";
-print $stats{'num_fail_dist3'} . " had var_distance_to_3' < $min_var_dist_3\n";
-
+print $stats{'num_fail_dist3'} . " had var_distance_to_3' < $min_var_dist_3 (illumina errors are more frequent at the 3' ends of reads)\n";
 print $stats{'num_pass_filter'} . " passed the strand filter\n";
 
-
-################################################################################
-
-=head3	iupac_to_base
-
-    Convert IUPAC ambiguity codes to variant bases
-
-
-=cut
-
+## iupac_to_base - Convert IUPAC ambiguity codes to variant bases ##
 
 sub iupac_to_base {
-    (my $allele1, my $allele2) = @_;
+    my ( $allele1, $allele2 ) = @_;
 
-    return($allele2) if($allele2 eq "A" || $allele2 eq "C" || $allele2 eq "G" || $allele2 eq "T");
+    return( $allele2 ) if( $allele2 eq "A" or $allele2 eq "C" or $allele2 eq "G" or $allele2 eq "T" );
 
-    if($allele2 eq "M") {
-        return("C") if($allele1 eq "A");
-        return("A") if($allele1 eq "C");
-        return("A");    ## Default for triallelic variant
-    } elsif($allele2 eq "R") {
-        return("G") if($allele1 eq "A");
-        return("A") if($allele1 eq "G");
-        return("A");     ## Default for triallelic variant
-    } elsif($allele2 eq "W") {
-        return("T") if($allele1 eq "A");
-        return("A") if($allele1 eq "T");
-        return("A");    ## Default for triallelic variant
-    } elsif($allele2 eq "S") {
-        return("C") if($allele1 eq "G");
-        return("G") if($allele1 eq "C");
-        return("C");    ## Default for triallelic variant
-    } elsif($allele2 eq "Y") {
-        return("C") if($allele1 eq "T");
-        return("T") if($allele1 eq "C");
-        return("C");    ## Default for triallelic variant
-    } elsif($allele2 eq "K") {
-        return("G") if($allele1 eq "T");
-        return("T") if($allele1 eq "G");
-        return("G");    ## Default for triallelic variant
+    # Choose the most likely base-pair, or the default for triallelic variants
+    if( $allele2 eq "M" ) {
+        return( "C" ) if( $allele1 eq "A" );
+        return( "A" ) if( $allele1 eq "C" );
+        return( "A" );
+    } elsif( $allele2 eq "R" ) {
+        return( "G" ) if( $allele1 eq "A" );
+        return( "A" ) if( $allele1 eq "G" );
+        return( "A" );
+    } elsif( $allele2 eq "W" ) {
+        return( "T" ) if( $allele1 eq "A" );
+        return( "A" ) if( $allele1 eq "T" );
+        return( "A" );
+    } elsif( $allele2 eq "S" ) {
+        return( "C" ) if( $allele1 eq "G" );
+        return( "G" ) if( $allele1 eq "C" );
+        return( "C" );
+    } elsif( $allele2 eq "Y" ) {
+        return( "C" ) if( $allele1 eq "T" );
+        return( "T" ) if( $allele1 eq "C" );
+        return( "C" );
+    } elsif( $allele2 eq "K" ) {
+        return( "G" ) if( $allele1 eq "T" );
+        return( "T" ) if( $allele1 eq "G" );
+        return( "G" );
     }
 
-    return($allele2);
+    die "Failed to interpret variant allele: $allele2";
 }
 
-
-################################################################################
-
-=head3	read_counts_by_allele
-
-    Retrieve relevant read counts for a certain allele 
-
-
-=cut
+## read_counts_by_allele - Retrieve relevant read counts for a certain allele ##
 
 sub read_counts_by_allele {
-    (my $line, my $allele) = @_;
+    my ( $line, $allele ) = @_;
 
     my @lineContents = split(/\t/, $line);
     my $numContents = @lineContents;
+    my $total_depth = $lineContents[3];
 
     for(my $colCounter = 5; $colCounter < $numContents; $colCounter++) {
         my $this_allele = $lineContents[$colCounter];
@@ -400,7 +358,7 @@ sub read_counts_by_allele {
                 $return_string .= $alleleContents[$printCounter];
             }
 
-            return($return_string);
+            return("$total_depth\t$return_string");
 
         }
     }
@@ -408,29 +366,46 @@ sub read_counts_by_allele {
     return("");
 }
 
+## help_text - Returns usage syntax and documentation ##
 
 sub help_text {
     return <<HELP;
-fpfilter - Advanced filtering for SomaticSniper
+
+fpfilter.pl - Advanced filtering for point mutations
 
 SYNOPSIS
-fpfilter [options] [file ...]
+perl fpfilter.pl [options] [file ...]
 
 OPTIONS
---snp-file              the input bam-somaticsniper output file (requires v1.0.0 or greater output)
---readcount-file        the output of bam-readcount for the snp-file
---help                  this message
+--var-file          List of variants in VCF, or tab-delimited list of "CHR POS REF VAR"
+--readcount-file    The output of bam-readcount for the genomic loci in var-file
+--output-file       Output file, tab-delimited list of variants with appended columns for filter status
+--min-read-pos      Minimum avg relative distance of variant from start/end of read [$min_read_pos]
+--min-strandedness  Minimum representation of variant allele on each strand [$min_strandedness]
+--min-var-count     Minimum number of variant-supporting reads [$min_var_count]
+--min-depth         Minimum read depth required across the variant site [$min_depth]
+--min-var-frac      Minimum variant allele fraction [$min_var_frac]
+--max-mmqs-diff     Maximum difference of mismatch quality sum between var/ref reads (paralog filter) [$max_mmqs_diff]
+--max-mapqual-diff  Maximum difference of mapping quality between variant and reference reads [$max_mapqual_diff]
+--max-readlen-diff  Maximum difference of average supporting read length between var/ref reads (paralog filter) [$max_readlen_diff]
+--min-var-dist-3    Minimum avg distance to effective 3' end of read (real end or Q2) for variant-supporting reads [$min_var_dist_3]
+--max-var-mmqs      Maximum mismatch quality sum of reference-supporting reads [$max_var_mmqs]
+--help              Show this message
 
 DESCRIPTION
-This program will filter bam-somaticsniper output with a variety of filters as detailed in the VarScan2 paper (http://www.ncbi.nlm.nih.gov/pubmed/22300766). It requires the bam-readcount utility (https://github.com/genome/bam-readcount). This is more convenient than the filtering described in the SomaticSniper paper, but more heuristic. Regardless, the principles are similar and we observe ~5% false negative rate with this filter.
+This program will filter a given list of variants output with a variety of filters as detailed in the VarScan2 paper (http://www.ncbi.nlm.nih.gov/pubmed/22300766). It relies on data generated by the bam-readcount utility (https://github.com/genome/bam-readcount).
 
-This filter was calibrated on 100bp PE Illumina reads. It is likely to be overly stringent for longer reads and may be less effective on shorter reads.
+This filter was calibrated on 100bp paired-end Illumina reads where we observed ~5% false negative rates. It is likely to be overly stringent for longer reads and may be less effective on shorter reads.
+
+The output file is tab-delimited and contains a column with a filter tag that can be written back into a VCF using vcf-annotate.
 
 AUTHORS
 Dan Koboldt     Original code
 Dave Larson     Modification specifically for bam-somaticsniper
+Cyriac Kandoth  Fixed allele-fraction, improved docs, support for generic VCFs
 
 SUPPORT
-For user support please mail genome-dev\@genome.wustl.edu.
+Please visit BioStars.org to see if your question was asked before. Else, post a new question, tag it with appropriate keywords, and the authors will find it.
+
 HELP
 }
