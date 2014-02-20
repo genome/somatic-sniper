@@ -7,6 +7,9 @@ use IO::File;
 
 ## Define filtering parameters ##
 
+# Minimum required depth to call a variant with confidence
+my $min_depth = 8;
+
 # Minimums for variant allele fraction, and the number of variant-supporting reads
 my $min_var_frac = 0.05;
 my $min_var_count = 3;
@@ -39,10 +42,11 @@ my $opt_result = GetOptions(
     'var-file=s' => \$var_file,
     'readcount-file=s' => \$readcount_file,
     'output-file=s' => \$output_file,
+    'min-depth=f' => \$min_depth,
     'min-read-pos=f' => \$min_read_pos,
-    'min-var-frac=f' => \$min_var_frac,
-    'min-var-count=f' => \$min_var_count,
     'min-strandedness=f' => \$min_strandedness,
+    'min-var-count=f' => \$min_var_count,
+    'min-var-frac=f' => \$min_var_frac,
     'max-mmqs-diff=f' => \$max_mmqs_diff,
     'max-mapqual-diff=f' => \$max_mapqual_diff,
     'max-readlen-diff=f' => \$max_readlen_diff,
@@ -88,7 +92,7 @@ my $output_fh = IO::File->new( $output_file, "w" ) or die "Can't open file $outp
 $output_fh->print( "#CHROM\tPOS\tREF\tVAR\tDEPTH\tRAF\tVAF\tFILTER\tFILTER_DETAILS\n" );
 
 # Initialize all variant fail/pass counters to zero
-my %stats = map{($_,0)} qw( num_variants num_fail_pos num_fail_strand num_fail_varcount
+my %stats = map{($_,0)} qw( num_variants num_fail_depth num_fail_pos num_fail_strand num_fail_varcount
     num_fail_varfrac num_fail_mmqs num_fail_var_mmqs num_fail_mapqual num_fail_readlen
     num_fail_dist3 num_no_readcounts num_pass_filter );
 
@@ -185,8 +189,8 @@ while( my $line = $input_fh->getline ) {
             ## We must have non-zero variant read counts to proceed ##
             if( $var_count && ( $var_plus + $var_minus )) {
 
-                ## FAILURE: READ POSITION ##
-                if(($var_pos < $min_read_pos)) {
+                ## FAILURE: Average distance of variant from clipped read ends ##
+                if($var_pos < $min_read_pos) {
                     $line .= "\tReadPos\t$var_pos < $min_read_pos\n";
                     $stats{'num_fail_pos'}++;
                 }
@@ -203,6 +207,12 @@ while( my $line = $input_fh->getline ) {
                 elsif($var_count < $min_var_count) {
                     $line .= "\tVarCount\t$var_count < $min_var_count\n";
                     $stats{'num_fail_varcount'}++;
+                }
+
+                ## FAILURE: Read depth is too low to proceed onto next few filters ##
+                elsif($total_depth < $min_depth) {
+                    $line .= "\tLowDepth\t$total_depth < $min_depth\n";
+                    $stats{'num_fail_depth'}++;
                 }
 
                 ## FAILURE: Variant allele fraction does not meet minimum ##
@@ -277,6 +287,7 @@ print $stats{'num_no_readcounts'} . " failed to get readcounts for variant allel
 print $stats{'num_fail_pos'} . " were near the ends of the supporting reads (position < $min_read_pos)\n";
 print $stats{'num_fail_strand'} . " had strandedness < $min_strandedness (most supporting reads are in the same direction)\n";
 print $stats{'num_fail_varcount'} . " had var_count < $min_var_count (not enough supporting reads)\n";
+print $stats{'num_fail_depth'} . " had depth < $min_depth\n";
 print $stats{'num_fail_varfrac'} . " had var_frac < $min_var_frac (low-fraction variants are likely artifacts or from crosstalk between samples in the same lane)\n";
 print $stats{'num_fail_mmqs'} . " had mismatch qualsum difference > $max_mmqs_diff (likely a result of paralogous misalignments)\n";
 print $stats{'num_fail_var_mmqs'} . " had variant MMQS > $max_var_mmqs (likely a result of paralogous misalignments)\n" if($stats{'num_fail_var_mmqs'});
@@ -369,15 +380,16 @@ OPTIONS
 --var-file          List of variants in VCF, or tab-delimited list of "CHR POS REF VAR"
 --readcount-file    The output of bam-readcount for the genomic loci in var-file
 --output-file       Output file, tab-delimited list of variants with appended columns for filter status
---min-var-frac      Minimum variant allele fraction [$min_var_frac]
---min-var-count     Minimum number of variant-supporting reads [$min_var_count]
 --min-read-pos      Minimum avg relative distance of variant from start/end of read [$min_read_pos]
 --min-strandedness  Minimum representation of variant allele on each strand [$min_strandedness]
+--min-var-count     Minimum number of variant-supporting reads [$min_var_count]
+--min-depth         Minimum read depth required across the variant site [$min_depth]
+--min-var-frac      Minimum variant allele fraction [$min_var_frac]
 --max-mmqs-diff     Maximum difference of mismatch quality sum between var/ref reads (paralog filter) [$max_mmqs_diff]
---max-var-mmqs      Maximum mismatch quality sum of reference-supporting reads [$max_var_mmqs]
 --max-mapqual-diff  Maximum difference of mapping quality between variant and reference reads [$max_mapqual_diff]
 --max-readlen-diff  Maximum difference of average supporting read length between var/ref reads (paralog filter) [$max_readlen_diff]
 --min-var-dist-3    Minimum avg distance to effective 3' end of read (real end or Q2) for variant-supporting reads [$min_var_dist_3]
+--max-var-mmqs      Maximum mismatch quality sum of reference-supporting reads [$max_var_mmqs]
 --help              Show this message
 
 DESCRIPTION
