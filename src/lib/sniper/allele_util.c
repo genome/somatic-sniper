@@ -18,8 +18,11 @@ int count_alleles(int a) {
  * */
 int should_filter_as_loh(int ref_base, int tumor_genotype, int normal_genotype) {
     return /* normal LOH in tumor */
-        genotype_is_proper_subset(tumor_genotype, normal_genotype)
-        || /* or gain of reference allele in the tumor */
-        (genotype_is_proper_subset(normal_genotype, tumor_genotype)
-            && genotype_set_difference(tumor_genotype, normal_genotype) == ref_base);
+        genotype_is_proper_subset(tumor_genotype, normal_genotype);
+}
+
+/* returns 1 if the site should be filtered out because the tumor has gained a copy or copies of the reference allele and the normal is homozygous variant */
+int should_filter_as_gor(int ref_base, int tumor_genotype, int normal_genotype) {
+    return
+        ( !genotype_is_proper_subset(ref_base, normal_genotype) && genotype_set_difference(tumor_genotype, normal_genotype) == ref_base);
 }
