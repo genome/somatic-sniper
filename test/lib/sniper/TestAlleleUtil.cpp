@@ -108,3 +108,25 @@ TEST(AlleleUtil, is_loh) {
     for (int i = 1; i < 15; ++i)
         ASSERT_EQ(1, is_loh(i, A|C|G|T));
 }
+
+TEST(AlleleUtil, should_filter_as_loh) {
+    // these are all the possible ways that LOH can happen with 2/3 alleles
+    // (we do not concern ourselves with N until later)
+    int ref_base = A;
+
+    ASSERT_TRUE(should_filter_as_loh(ref_base, A, A|G));
+    ASSERT_TRUE(should_filter_as_loh(ref_base, G, A|G));
+    ASSERT_TRUE(should_filter_as_loh(ref_base, G, C|G));
+    ASSERT_TRUE(should_filter_as_loh(ref_base, C, C|G));
+    ASSERT_FALSE(is_loh(A|G, G));
+    ASSERT_TRUE(is_loh(G, A|G));
+    ASSERT_TRUE(G != ref_base);
+    ASSERT_TRUE(should_filter_as_loh(ref_base, A|G, G));
+
+    ASSERT_FALSE(should_filter_as_loh(ref_base, A|G, A));
+    ASSERT_FALSE(should_filter_as_loh(ref_base, A, A));
+    ASSERT_FALSE(should_filter_as_loh(ref_base, G, A));
+    ASSERT_FALSE(should_filter_as_loh(ref_base, G, G));
+    ASSERT_FALSE(should_filter_as_loh(ref_base, A, G));
+    ASSERT_FALSE(should_filter_as_loh(ref_base, A|G, A|G));
+}

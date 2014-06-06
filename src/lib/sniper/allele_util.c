@@ -25,7 +25,7 @@ int is_loh(int a, int b) {
  * A AG AA Not LOH
  * */
 int should_filter_as_loh(int ref_base, int tumor_genotype, int normal_genotype) {
-    if (is_loh(tumor_genotype, normal_genotype) || (is_loh(normal_genotype, tumor_genotype && normal_genotype != ref_base))) {
+    if (is_loh(tumor_genotype, normal_genotype) || (is_loh(normal_genotype, tumor_genotype) && normal_genotype != ref_base)) {
         return 1;
     }
     else {

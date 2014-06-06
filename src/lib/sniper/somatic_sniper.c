@@ -222,7 +222,7 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                 normal_genotype = max_jointlk_normal;
             }
 
-            if( (d->min_somatic_qual <= qPosteriorSum) && (d->include_loh || !( is_loh(tumor_genotype, normal_genotype) || (is_loh(normal_genotype, tumor_genotype) && normal_genotype != rb4) ))) {
+            if( (d->min_somatic_qual <= qPosteriorSum) && (d->include_loh || !should_filter_as_loh(rb4, tumor_genotype, normal_genotype))) {
                 sniper_output_t out;
                 out.seq_name = d->h1->target_name[tid];
                 out.pos = pos;
