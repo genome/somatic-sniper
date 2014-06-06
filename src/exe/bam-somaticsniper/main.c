@@ -44,6 +44,7 @@ void usage(const char* progname, pu_data2_t* d) {
     fprintf(stderr, "        -q INT    filtering reads with mapping quality less than INT [%d]\n", d->mapQ);
     fprintf(stderr, "        -Q INT    filtering somatic snv output with somatic quality less than  INT [%d]\n", d->min_somatic_qual);
     fprintf(stderr, "        -L FLAG   do not report LOH variants as determined by genotypes\n");
+    fprintf(stderr, "        -G FLAG   do not report Gain of Reference variants as determined by genotypes\n");
     fprintf(stderr, "        -p FLAG   disable priors in the somatic calculation. Increases sensitivity for solid tumors\n");
     fprintf(stderr, "        -J FLAG   Use prior probabilities accounting for the somatic mutation rate\n");
     fprintf(stderr, "        -s FLOAT  prior probability of a somatic mutation (implies -J) [%f]\n",d->somatic_mutation_rate);
@@ -71,6 +72,7 @@ int main(int argc, char *argv[]) {
     d->c = sniper_maqcns_init();
     int use_priors = 1;
     d->include_loh = 1;
+    d->include_gor = 1;
     d->use_joint_priors = 0;
     d->somatic_mutation_rate = 0.01;
     const char *output_format = "classic";
@@ -91,6 +93,7 @@ int main(int argc, char *argv[]) {
             case 't': tumor_sample_id = optarg; break;
             case 'n': normal_sample_id = optarg; break;
             case 'L': d->include_loh = 0; break;
+            case 'G': d->include_gor = 0; break;
             default: fprintf(stderr, "Unrecognizd option '-%c'.\n", c); return 1;
         }
     }
