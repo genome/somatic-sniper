@@ -7,15 +7,7 @@ int count_alleles(int a) {
     return (a & 1) + ((a>>1)&1) + ((a>>2)&1) + ((a>>3)&1);
 }
 
-/* returns 1 if the alleles in a represent a loss of heterozygosity event with respect to b */
-int is_loh(int a, int b) {
-    if ((a&b) != a) /* a contains something b doesn't, can't be LOH */
-        return 0;
-
-    return ((a&b) != b);
-}
-
-/* returns 1 if the site should be filtered out because it is LOH from either the tumor or normal 
+/* returns 1 if the site should be filtered out because it is LOH from either the tumor or normal
  * R T  N
  * A AA AG LOH
  * A GG AG LOH
@@ -25,10 +17,9 @@ int is_loh(int a, int b) {
  * A AG AA Not LOH
  * */
 int should_filter_as_loh(int ref_base, int tumor_genotype, int normal_genotype) {
-    if (is_loh(tumor_genotype, normal_genotype) || (is_loh(normal_genotype, tumor_genotype) && normal_genotype != ref_base)) {
-        return 1;
-    }
-    else {
-        return 0;
-    }
+    return /* normal LOH in tumor */
+        genotype_is_proper_subset(tumor_genotype, normal_genotype)
+        || /* or gain of reference allele in the tumor */
+        (genotype_is_proper_subset(normal_genotype, tumor_genotype)
+            && genotype_set_difference(tumor_genotype, normal_genotype) == ref_base);
 }
