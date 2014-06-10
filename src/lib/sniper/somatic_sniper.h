@@ -28,6 +28,8 @@ typedef struct {
     int mask;
     int mapQ;
     int min_somatic_qual; //for limiting snp calls in somatic sniper
+    int include_loh;
+    int include_gor;
     char *ref;
     glfFile fp; // for glf output only
     const output_formatter_t *output_formatter; // vcf or classic

@@ -213,7 +213,18 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                 }
             }
 
-            if(d->min_somatic_qual <= qPosteriorSum) {
+            int tumor_genotype = tumor_base1;
+            if(max_jointlk_tumor) {
+                tumor_genotype = max_jointlk_tumor;
+            }
+            int normal_genotype = normal_base1;
+            if(max_jointlk_normal) {
+                normal_genotype = max_jointlk_normal;
+            }
+
+            if( (d->min_somatic_qual <= qPosteriorSum) 
+                    && (d->include_loh || !should_filter_as_loh(rb4, tumor_genotype, normal_genotype))
+                    && (d->include_gor || !should_filter_as_gor(rb4, tumor_genotype, normal_genotype)) ) {
                 sniper_output_t out;
                 out.seq_name = d->h1->target_name[tid];
                 out.pos = pos;
@@ -226,14 +237,6 @@ int glf_somatic(uint32_t tid, uint32_t pos, int n1, int n2, const bam_pileup1_t 
                 out.tumor.joint_genotype = max_jointlk_tumor;
                 out.tumor.joint_consensus_quality = joint_consensus_quality;
 
-                int tumor_genotype = tumor_base1;
-                if(max_jointlk_tumor) {
-                    tumor_genotype = max_jointlk_tumor;
-                }
-                int normal_genotype = normal_base1;
-                if(max_jointlk_normal) {
-                    normal_genotype = max_jointlk_normal;
-                }
 
                 if (tumor_genotype == normal_genotype)
                     out.tumor.variant_status = GERMLINE;
