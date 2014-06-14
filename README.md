@@ -53,7 +53,7 @@ The binary `bam-somaticsniper` can then be found under `somatic-sniper/build/bin
 
 ### I get lots of compile errors indicating that files are missing. How do I fix this?
 
-SomaticSniper requires that it be linked to an old version of samtools (v0.1.6). This typically happens because you have attempted to link to a newer version. As of version [1.0.3](https://github.com/genome/somatic-sniper/releases/tree/v1.0.3), SomaticSniper will take care of this during the compilation process.
+SomaticSniper requires that it be linked to an old version of samtools (v0.1.6). This typically happens because you have attempted to link to a newer version. As of version [1.0.3](https://github.com/genome/somatic-sniper/releases/tag/v1.0.3), SomaticSniper will take care of this during the compilation process.
 
 ### I get errors from cmake about missing modules. How do I fix this?
 
