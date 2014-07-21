@@ -1,0 +1,13 @@
+name: SomaticSniper
+short_name: somatic-sniper
+icon_16: gmt/gmt_somatic_sniper_16.png
+icon_48: gmt/gmt_somatic_sniper_48.png
+biostars_tag: SomaticSniper
+
+menu:
+  - text: Overview
+    href: gmt/index.html
+  - text: Installation
+    href: gmt/install.md
+  - text: Documentation
+    href: gmt/documentation.html
