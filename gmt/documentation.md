@@ -105,7 +105,7 @@ VCF output from SomaticSniper conforms to version 4.1 of the VCF speciﬁcation.
 The following FORMAT ﬁelds will be populated for each of NORMAL and TUMOR.
  
 | ID | Number | Type | Description |
-| -- | ------ | ---- | -----------|
+| --- | ------ | ---- | -----------|
 | GT | 1 | String | Genotype |
 |IGT | 1 | String |Genotype when called independently (only ﬁlled if called in joint prior mode)|
 | DP | 1 | Integer| Total read depth |
