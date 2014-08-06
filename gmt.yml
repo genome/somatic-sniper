@@ -10,4 +10,4 @@ menu:
   - text: Installation
     href: gmt/install.md
   - text: Documentation
-    href: gmt/documentation.html
+    href: gmt/documentation.md
