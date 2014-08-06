@@ -20,15 +20,15 @@ __Required Option:__
 
 __Options:__
 
-    -q  INT ﬁltering reads with mapping quality less than INT [0]
-    -Q  INT ﬁltering somatic snv output with somatic quality less than INT [15]
-    -p  FLAG disable priors in the somatic calculation. Increases sensitivity for solid tumors.
-    -J  FLAG Use prior probabilities accounting for the somatic mutation rate
-    -s  FLOAT prior probability of a somatic mutation (implies -J) [0.01]
-    -T  FLOAT theta in maq consensus calling model (for -c/-g) [0.850000]
-    -N  INT number of haplotypes in the sample (for -c/-g) [2]
-    -r  FLOAT prior of a diﬀerence between two haplotypes (for -c/-g) [0.001000]
-    -F  STRING select output format (vcf or classic) [classic]
+`-q  INT ﬁltering reads with mapping quality less than INT [0]`
+`-Q  INT ﬁltering somatic snv output with somatic quality less than INT [15]`
+`-p  FLAG disable priors in the somatic calculation. Increases sensitivity for solid tumors.`
+`-J  FLAG Use prior probabilities accounting for the somatic mutation rate`
+`-s  FLOAT prior probability of a somatic mutation (implies -J) [0.01]`
+`-T  FLOAT theta in maq consensus calling model (for -c/-g) [0.850000]`
+`-N  INT number of haplotypes in the sample (for -c/-g) [2]`
+`-r  FLOAT prior of a diﬀerence between two haplotypes (for -c/-g) [0.001000]`
+`-F  STRING select output format (vcf or classic) [classic]`
 
 ### Notes on running SomaticSniper
 
