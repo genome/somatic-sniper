@@ -130,4 +130,4 @@ The following FORMAT ﬁelds will be populated for each of NORMAL and TUMOR.
 
 ### User Support
 
-Please ﬁrst search Biostar (http://www.biostars.org) and then ask a question there if needed. We automatically monitor Biostar for questions related to our tools. 
+Please ﬁrst search [Biostar](http://www.biostars.org) and then ask a question there if needed. We automatically monitor Biostar for questions related to our tools. 
