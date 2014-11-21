@@ -64,6 +64,10 @@ As of commit [09ef624](https://github.com/genome/somatic-sniper/commit/09ef624e5
 3. Replace the empty build-common subdirectory in the sniper directory with directory you just created.
 4. Resume following the build instructions.
 
+### I get a floating point exception on running bam-somaticsniper. What's going on?
+
+This has been reported when using reference fasta indexes available via the GATK resource bundle. Please try reindexing your fasta with samtools and rerunning bam-somaticsniper.
+
 ## User Support
 
 Please first search [Biostar](http://www.biostars.org) and then ask a question there if needed.  We automatically monitor [Biostar](http://www.biostars.org) for questions related to our tools.
