@@ -57,9 +57,9 @@ sub parse_rev {
     if ($rev =~ /^([0-9]+)\.([0-9]+)\.([0-9]+)\.*([0-9]*)-([0-9]+)-g(.*)/) {
         $exe_suffix = "$1.$2";
         $full_version = "$1.$2.$3";
-        $commit = $5;
+        $commit = $6;
 
-        my $commits_past_tag = $4;
+        my $commits_past_tag = $5;
         if ($commits_past_tag > 0) {
             $exe_suffix = "$1.$2.$3-$commits_past_tag-unstable";
             $full_version = "$1.$2.$3-unstable-$commits_past_tag-$commit";
