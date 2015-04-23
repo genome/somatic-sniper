@@ -54,7 +54,7 @@ sub parse_rev {
     my $commit = $rev;
     my $dirty = is_dirty;
 
-    if ($rev =~ /^([0-9]+)\.([0-9]+)\.([0-9]+)-([0-9]+)-g(.*)/) {
+    if ($rev =~ /^([0-9]+)\.([0-9]+)\.([0-9]+)\.*([0-9]*)-([0-9]+)-g(.*)/) {
         $exe_suffix = "$1.$2";
         $full_version = "$1.$2.$3";
         $commit = $5;
