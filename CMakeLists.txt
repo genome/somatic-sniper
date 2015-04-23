@@ -10,7 +10,8 @@ include(ProjectHelper)
 
 # NOTE: for sniper we want the exe suffix to be like 0.7.4, not just 0.7
 #       which is the default from VersionHelper
-set(EXE_VERSION_SUFFIX ${FULL_VERSION})
+# I have diverged Sniper from normal build-common to support 4 part versioning where the last part is an (optional) patch version
+#set(EXE_VERSION_SUFFIX ${FULL_VERSION})
 
 configure_file(version/version.h.in version/version.h @ONLY)
 include_directories(${PROJECT_BINARY_DIR}/version)

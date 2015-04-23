@@ -54,15 +54,15 @@ sub parse_rev {
     my $commit = $rev;
     my $dirty = is_dirty;
 
-    if ($rev =~ /^([0-9]+)\.([0-9]+)\.([0-9]+)\.*([0-9]*)-([0-9]+)-g(.*)/) {
-        $exe_suffix = "$1.$2";
-        $full_version = "$1.$2.$3";
+    if ($rev =~ /^([0-9]+)\.([0-9]+)\.([0-9]+)(\.*[0-9]*)-([0-9]+)-g(.*)/) {
+        $exe_suffix = "$1.$2.$3";
+        $full_version = "$1.$2.$3$4";
         $commit = $6;
 
         my $commits_past_tag = $5;
         if ($commits_past_tag > 0) {
-            $exe_suffix = "$1.$2.$3-$commits_past_tag-unstable";
-            $full_version = "$1.$2.$3-unstable-$commits_past_tag-$commit";
+            $exe_suffix = "$1.$2.$3$4-$commits_past_tag-unstable";
+            $full_version = "$1.$2.$3$4-unstable-$commits_past_tag-$commit";
         }
     }
     if ($dirty) {
