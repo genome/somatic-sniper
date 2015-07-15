@@ -31,10 +31,12 @@ void get_dqstats(
 
         for (j = 0; j < 4; ++j) {
             int value = 1 << j;
-            if (base & value & wanted_bases) {
-                dqs->mean_baseQ[j] += bam1_qual(buf[i].b)[buf[i].qpos];
-                dqs->mean_mapQ[j] += buf[i].b->core.qual;
+            if ((base & value) == base) {
                 ++dqs->base_occ[j];
+                if (value & wanted_bases) {
+                    dqs->mean_baseQ[j] += bam1_qual(buf[i].b)[buf[i].qpos];
+                    dqs->mean_mapQ[j] += buf[i].b->core.qual;
+                }
             }
         }
     }
