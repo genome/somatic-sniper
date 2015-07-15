@@ -46,7 +46,15 @@ __Options:__
 
 Minimally, you must provide the program the reference fasta the bams were aligned against (passed with the -f option), a tumor bam, a normal bam, and the ﬁlename of the resulting output ﬁle. We recommend ﬁltering out reads with a mapping quality of 0 (i.e. use -q 1) as they are typically randomly placed in the genome. We have also found that few variants with a somatic score less than 15 validate, but you may decrease the minimum score or increase it to a higher threshold (eg -Q 40). To obtain high conﬁdence sites, we recommend also thresholding the minimum average mapping quality for the variant base to 40 for reads aligned with BWA or 70 for reads aligned with MAQ. We have not tested other aligners at this time. Disabling priors is not recommended, but may increase sensitivity at the cost of a decrease in speciﬁcity.
 
-Basic ﬁltering with provided Perl scripts
+#### Current Recommended Settings
+
+We recommend that you utilize both the `-G` and `-L` options when running in order to reduce likely false positives with little impact on sensitivity. An example command-line is below:
+
+```
+bam-somaticsniper -Q 40 -G -L -f reference.fa tumor.bam normal.bam output.txt
+```
+
+#### Basic ﬁltering with provided Perl scripts
 
 A small number of basic Perl scripts are included in the SomaticSniper package (located in src/scripts of the source code release) to aid in ﬁltering out likely false positives. In order to get the recommended ﬁltering you should do the following. Defaults are set assuming that BWA short is the aligner used. Other aligners have not been tested and recommendations are not available. Before proceeding you will need to obtain and compile bam-readcount (https://github.com/genome/bam-readcount). You will also need to generate a samtools pileup (not mpileup) indel ﬁle. Handling of indel containing VCFs is not implemented.
 
