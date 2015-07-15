@@ -24,9 +24,9 @@ void get_dqstats(
         dqs->total_mean_mapQ += buf[i].b->core.qual;
 
         base = bam1_seqi(bam1_seq(buf[i].b), buf[i].qpos);
-        if (base & ref_base)
+        if (base == ref_base)
             ++dqs->dp4[bam1_strand(buf[i].b)];
-        if (base & ~ref_base)
+        else
             ++dqs->dp4[2+bam1_strand(buf[i].b)];
 
         for (j = 0; j < 4; ++j) {
