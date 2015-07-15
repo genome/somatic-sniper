@@ -12,7 +12,7 @@ There are two modes, the joint genotyping mode (-J) takes into account the fact 
 
 ## Usage
 
-`bam-somaticsniper [options] -f <ref.fasta> <tumor.bam> <normal.bam> <snv_output_ﬁle>`
+`bam-somaticsniper [options] -f <ref.fasta> <tumor.bam> <normal.bam> <snv_output_file>`
 
 __Required Option:__
 
@@ -23,6 +23,10 @@ __Options:__
 `-q  INT ﬁltering reads with mapping quality less than INT [0]`
 
 `-Q  INT ﬁltering somatic snv output with somatic quality less than INT [15]`
+
+`-L FLAG do not report LOH variants as determined by genotypes`
+
+`-G FLAG do not report Gain of Referene variants as determined by genotypes`
 
 `-p  FLAG disable priors in the somatic calculation. Increases sensitivity for solid tumors.`
 
