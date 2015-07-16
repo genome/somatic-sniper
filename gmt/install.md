@@ -19,7 +19,7 @@ Note that for some RPM based systems (like RHEL), you will need to install cmake
 
 ### Clone the SomaticSniper repository
 
-Recursively clone the git repository
+Clone the git repository.
 
 ```
 git clone git://github.com/genome/somatic-sniper.git
