@@ -58,18 +58,16 @@ bam-somaticsniper -Q 40 -G -L -f reference.fa tumor.bam normal.bam output.txt
 
 A small number of basic Perl scripts are included in the SomaticSniper package (located in src/scripts of the source code release) to aid in filtering out likely false positives. In order to get the recommended filtering you should do the following. Defaults are set assuming that BWA short is the aligner used. Other aligners have not been tested and recommendations are not available. Before proceeding you will need to obtain and compile bam-readcount (https://github.com/genome/bam-readcount). You will also need to generate a samtools pileup (not mpileup) indel file. Handling of indel containing VCFs is not implemented.
 
-1. Filter on standard filters using the indel file. This will also remove LOH calls e.g. perl snpfilter.pl –snp-file your_sniper_file –indel-file your_indel_pileup
+1. Filter on standard filters using the indel file. This will also remove LOH calls e.g. `perl snpfilter.pl –snp-file your_sniper_file –indel-file your_indel_pileup`
 
-2. Adapt the remainder for use with bam-readcount e.g. perl prepare_for_readcount.pl –snp-file your_sniper_file.SNPfilter
+2. Adapt the remainder for use with bam-readcount e.g. `perl prepare_for_readcount.pl –snp-file your_sniper_file.SNPfilter`
 
-3. Run bam-readcount (I’d recommend using the same mapping quality -q setting as you ran 
-
-4. SomaticSniper with) e.g. bam-readcount -b 15 -f your_ref.fasta -l your_sniper_file.SNPfilter.pos your_tumor.bam > your_readcounts.rc
+3. Run bam-readcount (I’d recommend using the same mapping quality -q setting as you ran SomaticSniper with) e.g. `bam-readcount -b 15 -f your_ref.fasta -l your_sniper_file.SNPfilter.pos your_tumor.bam > your_readcounts.rc`
     Run the false positive filter e.g. perl fpfilter.pl –snp-file your_sniper_file.SNPfilter –readcount-file your_readcounts.rc
 
-5. Lastly, run the "high confidence" filter which filters based on the Somatic Score and mapping quality e.g. perl highconfidence.pl –snp-file your_sniper_file.SNPfilter.fp_pass
+5. Lastly, run the "high confidence" filter which filters based on the Somatic Score and mapping quality e.g. `perl highconfidence.pl –snp-file your_sniper_file.SNPfilter.fp_pass`
 
-Your final set of high confidence and highly filtered indels is now in the file your_sniper_file.SNPfilter.fp_pass.hc
+Your final set of high confidence and highly filtered indels is now in the file `your_sniper_file.SNPfilter.fp_pass.hc`
 
 ### File Formats
 
